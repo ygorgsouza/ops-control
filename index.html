@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Confirmação de Presença - Colaboradores DE</title>
-<meta name="description" content="Confirmação de Presença - Colaboradores DE · Delivery Express — registo diário de presenças, alertas e análises operacionais." />
+<title>Presenças - Colaboradores Delivery Express</title>
+<meta name="description" content="Presenças - Colaboradores Delivery Express — registo diário de presenças, relatório por cliente, alertas e análises." />
 <meta name="theme-color" content="#0b1120" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%234361ee%22/><path d=%22M6 12.5l4 4L18 8%22 stroke=%22white%22 stroke-width=%222.6%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -56,7 +56,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-  /* ===================== Sistema de design — Confirmação de Presença ===================== */
+  /* ===================== Sistema de design — Presenças Delivery Express ===================== */
   :root{
     --sidebar-bg:#0b1120;
     --sidebar-bg-2:#121a2e;
@@ -298,6 +298,65 @@
   .grid-store-head{background:color-mix(in srgb,var(--store-c) 9%,var(--card-bg));}
   @media (max-width:1023px){ .qbtns{flex-wrap:wrap;overflow:visible;} .reg-actions{align-items:flex-start;width:100%;justify-content:space-between;} }
   .mini em span{text-transform:none;letter-spacing:0;font-size:inherit;font-weight:600;}
+
+  /* ---------------- Relatório do dia (cartão para WhatsApp) — sempre claro ---------------- */
+  .report-grid{display:grid;gap:24px;grid-template-columns:1fr;}
+  @media (min-width:1400px){.report-grid{grid-template-columns:1fr 1fr;}}
+  .report-wrap{display:flex;flex-direction:column;gap:10px;max-width:720px;width:100%;}
+  .report-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;}
+  .wa-card{background:#ffffff;color:#0f172a;border:1px solid #e2e8f0;border-radius:18px;padding:22px 22px 16px;box-shadow:var(--shadow-md);font-family:'Inter',system-ui,sans-serif;}
+  .wa-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .wa-brand{display:flex;align-items:center;gap:10px;}
+  .wa-brand b{display:block;font-size:14px;font-weight:800;color:#0f172a;line-height:1.1;}
+  .wa-brand span{display:block;font-size:11px;font-weight:600;color:#64748b;}
+  .wa-date{font-size:12px;font-weight:600;color:#475569;text-align:right;}
+  .wa-client{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:14px;background:#f8fafc;border-left:6px solid;margin-bottom:12px;}
+  .wa-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;}
+  .wa-client-name{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.15;color:#0f172a;word-break:break-word;}
+  .wa-pct{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .wa-pct small{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748b;margin-top:4px;}
+  .wa-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+  .wa-stats > div{background:#f1f5f9;border-radius:12px;padding:10px 12px;}
+  .wa-stats b{display:block;font-size:22px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;color:#0f172a;}
+  .wa-stats span{display:block;font-size:10.5px;font-weight:600;color:#64748b;line-height:1.25;margin-top:2px;}
+  .wa-stats > div.ok{background:#ecfdf5;} .wa-stats > div.ok b{color:#0f766e;}
+  .wa-stats > div.bad{background:#fef2f2;} .wa-stats > div.bad b{color:#b91c1c;}
+  @media (max-width:520px){.wa-stats{grid-template-columns:repeat(2,1fr);} .wa-pct{font-size:32px;} .wa-client-name{font-size:20px;}}
+  .wa-allgood{font-size:12.5px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 12px;margin-bottom:12px;}
+  .wa-stores{display:flex;flex-direction:column;gap:8px;}
+  .wa-store{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;}
+  .wa-store-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .wa-store-name{font-size:14px;font-weight:800;color:#0f172a;}
+  .wa-store-meta{font-size:11.5px;color:#64748b;font-weight:600;}
+  .wa-store-pct{margin-left:auto;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .wa-abs{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 0 0;margin-top:7px;border-top:1px dashed #e2e8f0;font-size:13px;}
+  .wa-name{font-weight:700;color:#0f172a;min-width:0;}
+  .wa-type{font-size:11.5px;font-weight:600;color:#64748b;}
+  .wa-cov{font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .wa-cov.ok{background:#ccfbf1;color:#0f766e;} .wa-cov.bad{background:#fee2e2;color:#b91c1c;}
+  @media (max-width:520px){.wa-abs{grid-template-columns:1fr auto;} .wa-type{display:none;}}
+  .wa-present{font-size:11.5px;color:#475569;margin-top:7px;line-height:1.45;}
+  .wa-pending{font-size:11.5px;font-weight:700;color:#b45309;margin-top:7px;}
+  .wa-foot{font-size:10.5px;color:#94a3b8;margin-top:12px;line-height:1.4;}
+
+  /* ---------------- Centro de Comando ---------------- */
+  .scope{display:flex;gap:10px;padding:12px 14px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border-c);font-size:13px;line-height:1.45;}
+  .cc-col{background:var(--card-bg);border:1px solid var(--border-c);border-top:4px solid;border-radius:var(--radius);padding:14px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px;min-width:0;}
+  .cc-bad{border-top-color:#dc2626;} .cc-ok{border-top-color:#0d9488;} .cc-neutral{border-top-color:#16a34a;}
+  .cc-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;}
+  .cc-head span{margin-left:auto;font-size:12px;font-weight:800;padding:1px 9px;border-radius:10px;background:var(--hover);}
+  .cc-bad .cc-head{color:#b91c1c;} .cc-ok .cc-head{color:#0f766e;} .cc-neutral .cc-head{color:#15803d;}
+  .cc-item{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:10px;background:var(--hover);transition:background .15s;}
+  .cc-item:hover{background:color-mix(in srgb,var(--hover) 60%,var(--border-c));}
+  .cc-item i{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .cc-item b{font-size:13.5px;}
+  .cc-num{font-size:12px;font-weight:800;white-space:nowrap;} .cc-num.bad{color:#b91c1c;} .cc-num.ok{color:#0f766e;}
+  .cc-sub{font-size:11.5px;color:var(--text-secondary);margin-top:2px;}
+  .cc-names{font-size:12px;margin-top:4px;line-height:1.4;}
+  .cc-empty{font-size:12.5px;color:var(--text-secondary);padding:6px 2px;}
+  .banner-warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
+  html.dark .banner-warn{background:#2a2010;color:#fcd34d;border-color:#5a4512;}
+  .cchip span.bad{color:#b91c1c;}
 </style>
 </head>
 <body>
@@ -532,8 +591,8 @@ function LoginScreen({ onLogin }) {
         <div className="w-14 h-14 rounded-xl mx-auto mb-4 flex items-center justify-center" style={{ background: "var(--accent)" }}>
           <Icon path={<polyline points="5 12.5 10 17 19 7"/>} size={28} className="text-white" />
         </div>
-        <h1 className="text-xl font-extrabold mb-1 leading-tight">Confirmação de Presença</h1>
-        <p className="text-sm text-gray-500 mb-8">Colaboradores DE · Delivery Express</p>
+        <h1 className="text-xl font-extrabold mb-1 leading-tight">Presenças</h1>
+        <p className="text-sm text-gray-500 mb-8">Colaboradores Delivery Express</p>
         <form onSubmit={submit} className="text-left">
           <label className="text-xs font-bold text-gray-400 mb-1.5 block">O TEU NOME</label>
           <input
@@ -614,7 +673,7 @@ function ChartCanvas({ type, data, options, height = 240 }) {
 /* ---------------------------------------------------------------------- */
 const ABS_TYPES = ["Falta", "Meia Falta", "Abandono"];
 const TYPE_COLORS = { "Falta": "#ef4444", "Meia Falta": "#f59e0b", "Abandono": "#7f1d1d", "Backup Interno": "#0d9488", "Backup Externo": "#d97706", "Pool": "#0d9488" };
-const COB_LABEL = { int: "Backup interno", ext: "Backup externo", sem: "Sem backup" };
+const COB_LABEL = { int: "Backup interno", ext: "Backup externo", sem: "Sem reposição" };
 const COB_COLOR = { int: "#0d9488", ext: "#f59e0b", sem: "#ef4444" };
 
 const normTxt = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -647,34 +706,6 @@ function weeksOfMonth(mk) {
   list.forEach((w) => { w.label = `S${w.idx} · ${pad2(w.from)}–${pad2(w.to)}/${pad2(mo)}`; });
   return list;
 }
-
-// Contadores por estado (cada estado é contado individualmente)
-const emptyCounts = () => ({ ok: 0, falta: 0, meia: 0, abandono: 0, baixa: 0, formacao: 0, bkpInt: 0, bkpExt: 0, folga: 0, bloq: 0, pool: 0, cInt: 0, cExt: 0, sem: 0 });
-function addRec(c, r) {
-  switch (r.st) {
-    case "OK": c.ok++; break;
-    case "Falta": c.falta++; break;
-    case "Meia Falta": c.meia++; break;
-    case "Abandono": c.abandono++; break;
-    case "Baixa": c.baixa++; break;
-    case "Formação": c.formacao++; break;
-    case "Backup Interno": c.bkpInt++; c.cInt++; break;
-    case "Backup Externo": c.bkpExt++; c.cExt++; break;
-    case "Folga": c.folga++; break;
-    case "Bloqueado": c.bloq++; break;
-    case "Pool": c.pool++; c.cInt++; break;
-    default: break;
-  }
-  if (r.cob === "sem") c.sem++;
-}
-const totalFaltas = (c) => c.falta + c.meia + c.abandono;
-const totalBkpInt = (c) => c.bkpInt + c.pool; // status "Backup Interno" + atribuições da loja pool
-const outrosEstados = (c) => c.formacao + c.folga + c.bloq;
-const presencaPct = (c) => {
-  const base = c.ok + c.falta + c.meia + c.abandono + c.bkpInt + c.bkpExt + c.pool;
-  return base > 0 ? Math.round((c.ok / base) * 1000) / 10 : null;
-};
-const countRecs = (recs) => { const c = emptyCounts(); recs.forEach((r) => addRec(c, r)); return c; };
 
 // Constrói um registo por célula preenchida da grelha.
 // Células de lojas "pool" guardam o ID da loja coberta (não um estado) -> st = "Pool".
@@ -732,28 +763,6 @@ function matchBackups(backups, stores) {
         named.filter((s) => s.n.length >= 3 && n.includes(s.n)).sort((a, b2) => b2.n.length - a.n.length)[0] || null;
     }
     return { ...b, _sid: hit ? hit.id : "", _cid: hit ? hit.cid : "" };
-  });
-}
-
-// Cobertura das faltas — SÓ com a grelha. Cada célula "Backup Interno" / "Backup Externo" (e cada atribuição
-// da loja pool, que conta como interno na loja coberta) conta como UMA falta com backup interno/externo.
-// Para saber quais faltas ficam "sem backup", cada backup emparelha com UMA ausência da mesma loja
-// (1.º no mesmo dia, depois na mesma semana, depois no mesmo mês) -> r.cob = "int" | "ext" | "sem".
-// Nunca se conta o mesmo backup duas vezes.
-function annotateCoverage(recs) {
-  const byStore = new Map();
-  recs.forEach((r) => {
-    const t = r.st === "Backup Interno" || r.st === "Pool" ? "int" : r.st === "Backup Externo" ? "ext" : null;
-    if (!t || !r.storeId) return;
-    let l = byStore.get(r.storeId); if (!l) { l = []; byStore.set(r.storeId, l); }
-    l.push({ t, date: r.date, wk: r.wk, mk: r.mk, used: false });
-  });
-  const order = { "Falta": 0, "Abandono": 1, "Meia Falta": 2 };
-  recs.filter((r) => ABS_TYPES.includes(r.st)).sort((a, b) => order[a.st] - order[b.st] || a.date.localeCompare(b.date)).forEach((r) => {
-    const list = byStore.get(r.storeId) || [];
-    const pick = (fn) => list.find((x) => !x.used && fn(x) && x.t === "int") || list.find((x) => !x.used && fn(x));
-    const hit = pick((x) => x.date === r.date) || pick((x) => x.wk === r.wk) || pick((x) => x.mk === r.mk);
-    if (hit) { hit.used = true; r.cob = hit.t; r.cobDate = hit.date; } else r.cob = "sem";
   });
 }
 
@@ -1964,7 +1973,7 @@ function AnalysesView({ stores, employees, clients, getScheduleForMonth, monthOp
 /* @@CORE-START — NÚCLEO DE REGRAS (lógica pura, sem UI, testável)         */
 /* Partilhado por Registo Diário, Grelha, Centro de Comando e Alertas.     */
 /* ====================================================================== */
-const APP_NAME = "Confirmação de Presença - Colaboradores DE";
+const APP_NAME = "Presenças - Colaboradores Delivery Express";
 const todayISO = () => dateKey(new Date());
 const mkOfISO = (iso) => iso.slice(0, 7);
 const dayOfISO = (iso) => Number(iso.slice(8, 10));
@@ -2085,6 +2094,71 @@ function planStatusChange({ emp, empId, y, m0, day, cells, value, isPool, storeN
   return { batch: { [k]: value }, confirm: null, empUpdate: null, log: base };
 }
 
+
+/* ---------------------- REGRAS DE PRESENÇA (definição da direção) ----------------------
+   • "Falta" / "Meia Falta" / "Abandono" sem reposição = ninguém foi colocado no lugar -> a presença CAI.
+   • "Backup Interno" / "Backup Externo" = o colaborador faltou mas pusemos alguém -> a presença NÃO cai.
+   • Atribuição da loja pool no mesmo dia e na mesma loja também é reposição (backup interno):
+     primeiro preenche as células "Backup Interno" dessa loja/dia (dá o nome de quem foi), as restantes repõem faltas.
+   • Postos previstos = OK + Falta + Meia Falta + Abandono + Backup Interno + Backup Externo
+     (Folga, Baixa, Formação, Desligado, Sem preenchimento e por confirmar não são postos).
+   • Presença = (postos − faltas sem reposição) ÷ postos. Meia Falta sem reposição pesa 0,5.          */
+const emptyCounts = () => ({ ok: 0, falta: 0, meia: 0, abandono: 0, baixa: 0, formacao: 0, bkpInt: 0, bkpExt: 0, folga: 0, bloq: 0, pool: 0, desl: 0, cInt: 0, cExt: 0, sem: 0, semW: 0 });
+function addRec(c, r) {
+  switch (r.st) {
+    case "OK": c.ok++; break;
+    case "Falta": c.falta++; break;
+    case "Meia Falta": c.meia++; break;
+    case "Abandono": c.abandono++; break;
+    case "Baixa": c.baixa++; break;
+    case "Formação": c.formacao++; break;
+    case "Backup Interno": c.bkpInt++; c.cInt++; break;
+    case "Backup Externo": c.bkpExt++; c.cExt++; break;
+    case "Folga": c.folga++; break;
+    case "Bloqueado": c.bloq++; break;
+    case "Desligado": c.desl++; break;
+    case "Pool": c.pool++; break;
+    default: break;
+  }
+  if (ABS_TYPES.includes(r.st)) {
+    if (r.cob === "int") c.cInt++;
+    else if (r.cob === "ext") c.cExt++;
+    else if (r.cob === "sem") { c.sem++; c.semW += r.st === "Meia Falta" ? 0.5 : 1; }
+  }
+}
+const totalFaltas = (c) => c.falta + c.meia + c.abandono;                     // células de ausência (sem contar backups)
+const totalAusencias = (c) => c.falta + c.meia + c.abandono + c.bkpInt + c.bkpExt; // todas as faltas do colaborador
+const totalRepostas = (c) => c.cInt + c.cExt;
+const postosOf = (c) => c.ok + totalAusencias(c);
+const totalBkpInt = (c) => c.cInt;
+const outrosEstados = (c) => c.formacao + c.folga + c.bloq;
+const presencaPct = (c) => { const p = postosOf(c); return p > 0 ? Math.round(((p - c.semW) / p) * 1000) / 10 : null; };
+const countRecs = (recs) => { const c = emptyCounts(); recs.forEach((r) => addRec(c, r)); return c; };
+const isAbsence = (r) => ABS_TYPES.includes(r.st) || r.st === "Backup Interno" || r.st === "Backup Externo";
+const fmtNum = (n) => String(Math.round(n * 10) / 10).replace(".", ",");
+
+// Reposição avaliada no próprio dia e na própria loja.
+function annotateCoverage(recs) {
+  const groups = new Map();
+  recs.forEach((r) => {
+    if (r.st === "Backup Externo") { r.cob = "ext"; return; }
+    if (!r.storeId) { if (ABS_TYPES.includes(r.st)) r.cob = "sem"; return; }
+    if (r.st !== "Pool" && r.st !== "Backup Interno" && !ABS_TYPES.includes(r.st)) return;
+    const k = r.storeId + "|" + r.date;
+    let g = groups.get(k); if (!g) { g = { pool: [], bi: [], abs: [] }; groups.set(k, g); }
+    if (r.st === "Pool") g.pool.push(r); else if (r.st === "Backup Interno") g.bi.push(r); else g.abs.push(r);
+  });
+  const order = { "Falta": 0, "Abandono": 1, "Meia Falta": 2 };
+  groups.forEach((g) => {
+    const pool = g.pool.slice().sort((a, b) => a.emp.localeCompare(b.emp));
+    g.bi.forEach((r) => { r.cob = "int"; const p = pool.shift(); if (p) { r.cobBy = p.emp; p.covers = r.emp; } });
+    g.abs.sort((a, b) => order[a.st] - order[b.st] || a.emp.localeCompare(b.emp)).forEach((r) => {
+      const p = pool.shift();
+      if (p) { r.cob = "int"; r.cobBy = p.emp; p.covers = r.emp; } else r.cob = "sem";
+    });
+  });
+}
+
 /* ---------------------------- MOTOR DE ALERTAS ---------------------------- */
 const PRIO = {
   critico: { label: "Crítico", color: "#dc2626", rank: 0 },
@@ -2093,153 +2167,98 @@ const PRIO = {
   info:    { label: "Informativo", color: "#2563eb", rank: 3 },
 };
 const PRIO_RULES = [
-  ["Crítico", "Falta sem backup registada hoje ou ontem (posto potencialmente descoberto)."],
-  ["Alto", "Registos em falta em dias anteriores; faltas sem backup repetidas na semana; ausências em dias consecutivos (≥3); padrões recorrentes de gravidade alta."],
-  ["Médio", "Registos de hoje por verificar após as 12h; ausências em 2 dias consecutivos; padrões recorrentes de gravidade média; inconsistências que afetam cálculos."],
-  ["Informativo", "Tendências (acima do habitual / aumentos), dias sem nenhum registo, inconsistências que não alteram os números."],
+  ["Crítico", "Cliente com falta sem reposição hoje ou ontem."],
+  ["Alto", "Cliente com várias faltas sem reposição nos últimos 7 dias; motorista com o dobro do limite de faltas."],
+  ["Médio", "Cliente com uma falta sem reposição nos últimos 7 dias; motorista que atingiu o limite de faltas."],
 ];
-const ACTION_BY_KIND = {
-  "Motorista com faltas recorrentes": "Falar com o colaborador para perceber o motivo, registar o acompanhamento e avaliar substituição se o padrão continuar.",
-  "Repetição na mesma loja": "Rever a escala da loja com o supervisor e garantir backup disponível para os dias críticos.",
-  "Repetição no mesmo cliente": "Rever a cobertura do cliente com o supervisor responsável e identificar as lojas que concentram as faltas.",
-  "Ocorrências sem backup": "Confirmar se houve cobertura não registada; se não houve, reforçar o pool de backup para esta loja.",
-  "Aumento de faltas na loja": "Abrir os registos e identificar os colaboradores que explicam o aumento face ao período anterior.",
-  "Aumento de faltas no cliente": "Abrir os registos e identificar as lojas e colaboradores que explicam o aumento face ao período anterior.",
-  "Aumento de abandonos": "Rever as saídas recentes, o processo de integração e as substituições em curso.",
-  "Semana acima do habitual": "Identificar os clientes e lojas que concentram o aumento (abrir registos).",
-  "Mês acima do habitual": "Identificar os clientes e lojas que concentram o aumento (abrir registos).",
-};
-const TREND_KINDS = ["Semana acima do habitual", "Mês acima do habitual", "Aumento de faltas na loja", "Aumento de faltas no cliente"];
+const ALERT_FIELDS = [
+  ["motSem", "Motorista: faltas nos últimos 7 dias ≥"],
+  ["motMes", "Motorista: faltas nos últimos 30 dias ≥"],
+  ["semBkpSem", "Cliente: faltas sem reposição em 7 dias para prioridade Alta ≥"],
+];
 const safeKey = (s) => String(s).replace(/[.~*/\[\]`]/g, "_");
 const listDates = (recs) => [...new Set(recs.map((r) => r.date))].sort().map((d) => fmtDMY(d).slice(0, 5)).join(", ");
+const absLabel = (r) => (r.st === "Backup Interno" || r.st === "Backup Externo" ? "Falta" : r.st === "Meia Falta" ? "Meia falta" : r.st);
+const covLabel = (r) => (r.cob === "sem" ? "Sem reposição" : r.cob === "ext" ? "Backup externo" : r.cob === "int" ? `Backup interno${r.cobBy ? " · " + r.cobBy : ""}` : "");
 
-function buildAllAlerts({ data, employees, stores, clients, cfg, months, todayIso, hour }) {
+// Só dois tipos de alerta: clientes com faltas sem reposição e motoristas reincidentes.
+function buildAllAlerts({ data, employees, clients, cfg, todayIso }) {
   const out = [];
-  const storeById = new Map(stores.map((s) => [s.id, s]));
-  const clientById = new Map(clients.map((c) => [c.id, c]));
   const empById = new Map(employees.map((e) => [e.id, e]));
-  const curMk = months[months.length - 1];
-  const inactiveClient = (cid) => { const c = clientById.get(cid); return !!(c && c.ativo === false); };
+  const clientById = new Map(clients.map((c) => [c.id, c]));
+  const activeCli = (cid) => { const c = clientById.get(cid); return !c || c.ativo !== false; };
+  const from7 = shiftISO(todayIso, -6), from30 = shiftISO(todayIso, -29), yest = shiftISO(todayIso, -1);
+  const recs = data.recs.filter((r) => r.date <= todayIso && activeCli(r.clientId));
 
-  // 1) Registos por verificar — últimos 7 dias (só meses com dados na grelha; sem dados = não avaliado)
-  for (let i = 0; i < 7; i++) {
-    const iso = shiftISO(todayIso, -i);
-    const mk = mkOfISO(iso);
-    if (!data.schedules[mk] || !data.monthHasData[mk]) continue;
-    const rows = buildDayRoster({ iso, employees, stores, clients, cells: data.schedules[mk] });
-    const pend = rows.filter((r) => r.kind === "pending");
-    if (!pend.length) continue;
-    const anyFilled = rows.some((r) => r.kind !== "pending" && !r.auto);
-    const sev = i === 0 ? (hour >= 12 ? "medio" : "info") : (anyFilled ? "alto" : "info");
-    const byCli = {};
-    pend.forEach((r) => { const n = r.client ? r.client.nome : "Sem cliente"; byCli[n] = (byCli[n] || 0) + 1; });
-    const cliTxt = Object.entries(byCli).sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} (${c})`).join(", ");
-    out.push({
-      key: `pend|${iso}`, sig: String(pend.length), kind: "Registos por verificar", sev, scope: "Diário", date: iso, period: fmtDMY(iso),
-      title: i === 0 ? `${pend.length} registo(s) por verificar hoje` : (anyFilled ? `${pend.length} registo(s) por verificar · ${fmtDMY(iso)}` : `Dia sem nenhum registo · ${fmtDMY(iso)}`),
-      problem: anyFilled || i === 0 ? `${pend.length} de ${rows.filter((r) => r.kind !== "na").length} colaboradores esperados não têm a situação confirmada.` : `Nenhum colaborador tem registo neste dia (${pend.length} esperados).`,
-      context: anyFilled || i === 0 ? `Por cliente: ${cliTxt}. Pendente não significa ausente — significa não verificado.` : "Pode ser um dia sem operação (ex.: feriado) ou um dia que não foi registado. Os indicadores deste dia não são fiáveis até ser confirmado.",
-      action: "Abrir o Registo Diário deste dia, filtrado nos pendentes, e confirmar a situação de cada colaborador.",
-      clientIds: [...new Set(pend.map((r) => (r.client ? r.client.id : "")))], empIds: [],
-      people: pend.map((r) => ({ id: r.emp.id, nome: r.emp.nome, store: r.store.nome, client: r.client ? r.client.nome : "Sem cliente" })),
-      nav: { view: "daily", params: { date: iso, filter: "pendentes" } },
-    });
-  }
-
-  // 2) Faltas sem backup — janela móvel de 7 dias por loja
-  const from7 = shiftISO(todayIso, -6), yest = shiftISO(todayIso, -1);
-  const sem = data.recs.filter((r) => ABS_TYPES.includes(r.st) && r.cob === "sem" && r.date >= from7 && r.date <= todayIso && !inactiveClient(r.clientId));
-  groupCount(sem, (r) => r.storeId || "_none").forEach((e) => {
+  // 1) Clientes com faltas sem reposição (7 dias)
+  const sem = recs.filter((r) => ABS_TYPES.includes(r.st) && r.cob === "sem" && r.date >= from7);
+  groupCount(sem, (r) => r.clientId || "_none").forEach((e) => {
     const recent = e.recs.some((r) => r.date >= yest);
-    const sev = recent ? "critico" : (e.n >= cfg.semBkpSem ? "alto" : "medio");
+    const sev = recent ? "critico" : e.n >= cfg.semBkpSem ? "alto" : "medio";
+    const byEmp = [...groupCount(e.recs, (r) => r.empId).values()].map((x) => `${x.recs[0].emp} (${listDates(x.recs)})`).join(" · ");
     const r0 = e.recs[0];
     const last = e.recs.map((r) => r.date).sort().pop();
     out.push({
-      key: safeKey(`semBkp|${e.k}`), sig: e.recs.map((r) => r.date + r.empId).sort().join(","), kind: "Falta sem backup", sev, scope: "7 dias", date: last, period: `${fmtDMY(from7)} – ${fmtDMY(todayIso)}`,
-      title: `${r0.store} · ${e.n} falta(s) sem backup`, entity: `${r0.client} · ${r0.store}`,
-      problem: `${e.n} ausência(s) (Falta, Meia Falta ou Abandono) sem backup emparelhado nos últimos 7 dias. Datas: ${listDates(e.recs)}.`,
-      context: "Nenhum Backup Interno/Externo ou atribuição da loja pool ficou disponível na grelha para emparelhar (mesmo dia → semana → mês). A cobertura operacional não ficou confirmada.",
-      action: "Confirmar se o posto ficou descoberto. Se houve cobertura, registá-la na grelha; se não houve, avaliar o impacto junto do cliente e reforçar o backup desta loja.",
+      key: safeKey(`cliSem|${e.k}`), sig: e.recs.map((r) => r.date + r.empId).sort().join(","), kind: "Cliente com faltas sem reposição", sev,
+      period: `${fmtDMY(from7)} – ${fmtDMY(todayIso)}`, date: last, title: `${r0.client} · ${fmtNum(e.recs.reduce((a, r) => a + (r.st === "Meia Falta" ? 0.5 : 1), 0))} falta(s) sem reposição`,
+      entity: [...new Set(e.recs.map((r) => r.store))].join(", "), summary: byEmp,
       clientIds: [r0.clientId], empIds: [...new Set(e.recs.map((r) => r.empId))], recs: e.recs,
-      nav: { view: "daily", params: { date: last, clientId: r0.clientId } },
+      nav: { view: "report", params: { date: last, clientId: r0.clientId }, label: "Abrir relatório do dia" },
     });
   });
 
-  // 3) Ausências em dias consecutivos (últimos 14 dias)
-  const from14 = shiftISO(todayIso, -13);
-  const abs14 = data.recs.filter((r) => ABS_TYPES.includes(r.st) && r.date >= from14 && r.date <= todayIso && empById.has(r.empId));
-  groupCount(abs14, (r) => r.empId).forEach((e) => {
-    const dates = [...new Set(e.recs.map((r) => r.date))].sort();
-    let best = null, run = [dates[0]];
-    for (let i = 1; i <= dates.length; i++) {
-      if (i < dates.length && shiftISO(dates[i - 1], 1) === dates[i]) run.push(dates[i]);
-      else { if (run.length >= 2 && (!best || run[run.length - 1] >= best[best.length - 1])) best = run; run = [dates[i]]; }
-    }
-    if (!best) return;
-    const recs = e.recs.filter((r) => best.includes(r.date));
-    const r0 = recs[0];
+  // 2) Motoristas reincidentes (todas as faltas, com ou sem reposição)
+  const abs30 = recs.filter((r) => isAbsence(r) && r.date >= from30 && empById.has(r.empId));
+  groupCount(abs30, (r) => r.empId).forEach((e) => {
+    const n7 = e.recs.filter((r) => r.date >= from7).length;
+    const hit30 = e.n >= cfg.motMes, hit7 = n7 >= cfg.motSem;
+    if (!hit30 && !hit7) return;
+    const sev = e.n >= cfg.motMes * 2 || n7 >= cfg.motSem * 2 ? "alto" : "medio";
+    const r0 = e.recs.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+    const semN = e.recs.filter((r) => r.cob === "sem").length;
     out.push({
-      key: safeKey(`consec|${e.k}|${best[0]}`), sig: String(best.length), kind: "Ausências consecutivas", sev: best.length >= 3 ? "alto" : "medio", scope: "14 dias", date: best[best.length - 1], period: `${fmtDMY(best[0])} – ${fmtDMY(best[best.length - 1])}`,
-      title: `${r0.emp} · ${best.length} dias seguidos de ausência`, entity: `${r0.client} · ${r0.store}`,
-      problem: `${best.length} dias consecutivos com Falta, Meia Falta ou Abandono (${listDates(recs)}).`,
-      context: `Tipos: ${[...new Set(recs.map((r) => r.st))].join(", ")}. Cobertura: ${recs.filter((r) => r.cob === "sem").length} sem backup.`,
-      action: "Contactar o colaborador ou o supervisor para confirmar a situação (baixa não registada, abandono, outro motivo) e atualizar o registo se necessário.",
-      clientIds: [r0.clientId], empIds: [e.k], recs, nav: { view: "employee", params: { empId: e.k } },
+      key: safeKey(`emp|${e.k}`), sig: String(e.n) + "|" + n7, kind: "Motorista reincidente", sev, period: `${fmtDMY(from30)} – ${fmtDMY(todayIso)}`, date: r0.date,
+      title: `${r0.emp} · ${e.n} falta(s) em 30 dias`, entity: `${r0.client} · ${r0.store}`,
+      summary: `${n7} nos últimos 7 dias · ${semN} sem reposição · ${e.n - semN} com backup. Datas: ${listDates(e.recs)}.`,
+      clientIds: [r0.clientId], empIds: [e.k], recs: e.recs, nav: { view: "employee", params: { empId: e.k }, label: "Abrir colaborador" },
     });
   });
-
-  // 4) Padrões do mês atual (motor original computeAlerts, critérios configuráveis)
-  const abs = data.recs.filter((r) => ABS_TYPES.includes(r.st));
-  computeAlerts(abs, [curMk], months, data.monthHasData, cfg).forEach((a) => {
-    if (a.kind === "Ocorrências sem backup" && a.scope === "Semanal") return; // coberto pela janela de 7 dias
-    const r0 = a.recs[0] || {};
-    const ent = /Motorista/.test(a.kind) ? r0.empId : /loja/.test(a.kind) || a.kind === "Ocorrências sem backup" ? r0.storeId : /cliente/.test(a.kind) ? r0.clientId : "all";
-    const trend = TREND_KINDS.includes(a.kind);
-    const sev = trend ? (a.sev === "alta" ? "medio" : "info") : (a.sev === "alta" ? "alto" : "medio");
-    if (a.recs.length && a.recs.every((r) => inactiveClient(r.clientId))) return;
-    out.push({
-      key: safeKey(`pat|${a.kind}|${a.scope}|${a.sortKey}|${ent}`), sig: String(a.recs.length), kind: a.kind, sev, scope: a.scope, period: a.period,
-      date: a.recs.map((r) => r.date).sort().pop() || "", title: a.title, entity: r0.client ? `${r0.client}${/Motorista|loja/.test(a.kind) ? " · " + r0.store : ""}` : "",
-      problem: a.title + ".", context: a.detail, action: ACTION_BY_KIND[a.kind] || "Analisar os registos associados.",
-      clientIds: [...new Set(a.recs.map((r) => r.clientId))], empIds: /Motorista/.test(a.kind) ? [r0.empId] : [], recs: a.recs,
-      nav: /Motorista/.test(a.kind) ? { view: "employee", params: { empId: r0.empId } } : { view: "analyses", params: {} },
-    });
-  });
-
-  // 5) Inconsistências de dados (verificáveis)
-  const orphan = data.recs.filter((r) => r.emp === "Colaborador removido" && (r.mk === curMk || r.mk === shiftMonth(curMk, -1)));
-  if (orphan.length) out.push({
-    key: `inc|orphan|${curMk}`, sig: String(orphan.length), kind: "Inconsistência de dados", sev: "info", scope: "Dados", period: `${monthShort(shiftMonth(curMk, -1))} – ${monthShort(curMk)}`, date: "",
-    title: `${orphan.length} registo(s) de colaboradores eliminados`, problem: `Existem ${orphan.length} células da grelha associadas a colaboradores que já não existem.`,
-    context: "Estes registos aparecem como “Sem loja / Sem cliente” nas análises e não são atribuídos a nenhuma operação.",
-    action: "Em vez de eliminar colaboradores, marcá-los como Desligado (preserva o histórico). Os registos antigos mantêm-se intactos.", clientIds: [], empIds: [], recs: orphan, nav: { view: "reports", params: {} },
-  });
-  employees.forEach((e) => {
-    if (e.estado !== "Desligado" && e.lojaId && !storeById.has(e.lojaId)) out.push({
-      key: safeKey(`inc|noStore|${e.id}`), sig: e.lojaId, kind: "Inconsistência de dados", sev: "medio", scope: "Dados", period: "Atual", date: "",
-      title: `${e.nome} · loja inexistente`, problem: `${e.nome} está ativo mas associado a uma loja que já não existe.`,
-      context: "O colaborador não aparece na Grelha nem no Registo Diário e não entra em nenhum indicador.", action: "Editar o colaborador e atribuir a loja correta.",
-      clientIds: [], empIds: [e.id], nav: { view: "employee", params: { empId: e.id } },
-    });
-    if (e.estado === "Desligado" && !e.desligadoData) out.push({
-      key: safeKey(`inc|noExit|${e.id}`), sig: "1", kind: "Inconsistência de dados", sev: "info", scope: "Dados", period: "Atual", date: "",
-      title: `${e.nome} · desligado sem data de saída`, problem: `${e.nome} está Desligado sem data de desligamento.`,
-      context: "Sem data, o colaborador desaparece de todos os meses da Grelha (incluindo os anteriores à saída).", action: "Editar o colaborador e preencher a data de desligamento.",
-      clientIds: [], empIds: [e.id], nav: { view: "employee", params: { empId: e.id } },
-    });
-  });
-  data.recs.filter((r) => EXIT_STATUSES.includes(r.st) && (r.mk === curMk || r.mk === shiftMonth(curMk, -1))).forEach((r) => {
-    const e = empById.get(r.empId);
-    if (!e || e.estado === "Desligado") return;
-    out.push({
-      key: safeKey(`inc|exitActive|${r.empId}|${r.date}`), sig: "1", kind: "Inconsistência de dados", sev: "info", scope: "Dados", period: fmtDMY(r.date), date: r.date,
-      title: `${e.nome} · ${r.st} registado mas colaborador ativo`, problem: `A grelha tem “${r.st}” em ${fmtDMY(r.date)}, mas a ficha está Ativo.`,
-      context: "Pode ser uma reativação intencional ou uma alteração incompleta.", action: "Confirmar a situação e corrigir a célula ou a ficha do colaborador.",
-      clientIds: [r.clientId], empIds: [r.empId], recs: [r], nav: { view: "employee", params: { empId: r.empId } },
-    });
-  });
-
   return out.sort((a, b) => PRIO[a.sev].rank - PRIO[b.sev].rank || (b.date || "").localeCompare(a.date || ""));
+}
+
+// Resumo por cliente → loja de um dia (base do relatório para WhatsApp e do Centro de Comando).
+function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
+  const roster = buildDayRoster({ iso, employees, stores, clients, cells: cells || {} });
+  const byClient = new Map();
+  const getC = (cl) => {
+    const id = cl ? cl.id : "_none";
+    let C = byClient.get(id);
+    if (!C) { C = { id, nome: cl ? cl.nome : "Sem cliente", cor: cl ? cl.cor || "#64748b" : "#64748b", c: emptyCounts(), pending: 0, stores: new Map() }; byClient.set(id, C); }
+    return C;
+  };
+  const getS = (C, st) => {
+    let S = C.stores.get(st.id);
+    if (!S) { S = { id: st.id, nome: st.nome, ordem: st.ordem ?? 0, c: emptyCounts(), pending: 0, abs: [], present: [] }; C.stores.set(st.id, S); }
+    return S;
+  };
+  const storeById = new Map(stores.map((s) => [s.id, s]));
+  roster.forEach((row) => {
+    if (row.isPool) return;
+    const C = getC(row.client), S = getS(C, row.store);
+    if (row.kind === "pending") { S.pending++; C.pending++; }
+  });
+  recs.forEach((r) => {
+    if (r.date !== iso || r.st === "Pool" || !byClient.has(r.clientId || "_none")) return;
+    const C = byClient.get(r.clientId || "_none");
+    const st = storeById.get(r.storeId);
+    if (!st || st.tipo === "backup_pool") return;
+    const S = getS(C, st);
+    addRec(S.c, r); addRec(C.c, r);
+    if (isAbsence(r)) S.abs.push(r);
+    if (r.st === "OK") S.present.push(r.emp);
+  });
+  return [...byClient.values()].map((C) => ({ ...C, stores: [...C.stores.values()].filter((S) => postosOf(S.c) > 0 || S.pending > 0).sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome)) }))
+    .filter((C) => C.stores.length).sort((a, b) => a.nome.localeCompare(b.nome));
 }
 /* @@CORE-END */
 
@@ -2440,13 +2459,14 @@ function FilterChips({ items, onClearAll }) {
 /* ====================================================================== */
 const NAV = [
   { group: "Operação", items: [
-    { id: "command", label: "Centro de Comando", icon: ICONS.command },
+    { id: "report", label: "Relatório do Dia", icon: ICONS.layers },
     { id: "daily", label: "Registo Diário", icon: ICONS.calendarCheck },
     { id: "grid", label: "Grelha Mensal", icon: ICONS.grid },
   ] },
-  { group: "Inteligência", items: [
-    { id: "alerts", label: "Central de Alertas", icon: ICONS.bell },
+  { group: "Direção", items: [
+    { id: "command", label: "Centro de Comando", icon: ICONS.command },
     { id: "analyses", label: "Análises", icon: ICONS.analytics },
+    { id: "alerts", label: "Alertas", icon: ICONS.bell },
   ] },
   { group: "Gestão", items: [
     { id: "clients", label: "Clientes", icon: ICONS.building },
@@ -2455,7 +2475,7 @@ const NAV = [
     { id: "backups", label: "Backups", icon: ICONS.backup },
   ] },
   { group: "Sistema", items: [
-    { id: "reports", label: "Histórico e Relatórios", icon: ICONS.file },
+    { id: "reports", label: "Histórico e Exportação", icon: ICONS.file },
     { id: "settings", label: "Configurações", icon: ICONS.settings },
   ] },
 ];
@@ -2476,8 +2496,8 @@ function Sidebar({ view, setView, collapsed, setCollapsed, user, onLogout, unrea
         <BrandMark />
         {(!collapsed || isMobile) && (
           <div className="leading-tight min-w-0">
-            <div className="text-[13px] font-extrabold text-white">Confirmação de Presença</div>
-            <div className="text-[10.5px] text-slate-400 font-semibold tracking-wide">COLABORADORES DE · DELIVERY EXPRESS</div>
+            <div className="text-[13px] font-extrabold text-white">Presenças</div>
+            <div className="text-[10.5px] text-slate-400 font-semibold tracking-wide">COLABORADORES DELIVERY EXPRESS</div>
           </div>
         )}
       </div>
@@ -2536,7 +2556,7 @@ function Header({ user, dark, onToggleDark, onMenu, onSearch, unread, onAlerts, 
       <div className="flex items-center gap-3 min-w-0">
         <button onClick={onMenu} className="icon-btn lg:hidden" aria-label="Abrir menu"><Icon path={ICONS.menu} size={19} /></button>
         <div className="hidden md:flex items-center gap-2 text-[13px] text-[var(--text-secondary)] font-medium truncate"><Icon path={ICONS.calendar} size={15} />{label.charAt(0).toUpperCase() + label.slice(1)}</div>
-        <div className="md:hidden text-sm font-extrabold truncate">Confirmação de Presença</div>
+        <div className="md:hidden text-sm font-extrabold truncate">Presenças · Delivery Express</div>
       </div>
       <div className="flex items-center gap-1.5">
         <SyncIndicator sync={sync} />
@@ -2682,7 +2702,7 @@ function DailyRegisterView({ params }) {
     annotateCoverage(r);
     return r;
   }, [ready, mk, cells, employees, stores, clients]);
-  const covByEmp = useMemo(() => { const m = new Map(); monthRecs.forEach((r) => { if (r.date === date && ABS_TYPES.includes(r.st)) m.set(r.empId, r); }); return m; }, [monthRecs, date]);
+  const covByEmp = useMemo(() => { const m = new Map(); monthRecs.forEach((r) => { if (r.date === date && (isAbsence(r) || r.st === "Pool")) m.set(r.empId, r); }); return m; }, [monthRecs, date]);
 
   const clientOpts = useMemo(() => {
     const m = new Map();
@@ -2750,13 +2770,12 @@ function DailyRegisterView({ params }) {
     await ops.bulkSet(mk, batch, `${store.nome} · ${fmtDMY(date)}: ${targets.length} pendente(s) → OK (em lote): ${targets.map((r) => r.emp.nome).join(", ")}`);
   };
 
-  const presBase = dayC.ok + dayC.falta + dayC.meia + dayC.abandono + dayC.bkpInt + dayC.bkpExt + dayC.pool;
   const done = ready && st.universe > 0 && st.pending === 0;
   const isFuture = date > todayISO();
 
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Operação" title="Registo Diário" subtitle={fmtLongDate(date)} right={<DateNav date={date} setDate={setDate} />} />
+      <PageHeader eyebrow="Operação" title="Registo Diário" subtitle={fmtLongDate(date)} right={<><DateNav date={date} setDate={setDate} /><button onClick={() => ops.nav("report", { date, clientId: fClient && fClient !== "_none" ? fClient : "" })} className="btn btn-primary"><Icon path={ICONS.layers} size={15} />Relatório do dia</button></>} />
 
       {err && <div className="banner banner-err mb-4"><Icon path={ICONS.alert} size={16} />Não foi possível carregar o mês {monthLabelOf(mk)}: {err}</div>}
       {isFuture && <div className="banner banner-info mb-4"><Icon path={ICONS.info} size={16} />Data futura — podes planear folgas, formações ou baixas; as presenças só se confirmam no próprio dia.</div>}
@@ -2779,10 +2798,10 @@ function DailyRegisterView({ params }) {
             </div>
             <ProgressBar segs={KIND_SEGS(st)} total={st.universe} />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-              <div className="mini"><span>Presença do dia</span><b>{presBase >= MIN_DAY_SAMPLE ? fmtPct(presencaPct(dayC)) : "—"}</b><em>{presBase >= MIN_DAY_SAMPLE ? `OK ÷ ${presBase} registos de trabalho` : `amostra < ${MIN_DAY_SAMPLE}`}</em></div>
-              <div className="mini"><span>Ausências</span><b style={{ color: totalFaltas(dayC) ? "#dc2626" : undefined }}>{totalFaltas(dayC)}</b><em>{dayC.falta} falta · {dayC.meia} meia · {dayC.abandono} aband.</em></div>
-              <div className="mini"><span>Sem backup</span><b style={{ color: dayC.sem ? "#dc2626" : undefined }}>{dayC.sem}</b><em>regra de emparelhamento da grelha</em></div>
-              <div className="mini"><span>Backups registados</span><b>{dayC.cInt + dayC.cExt}</b><em>{dayC.cInt} interno · {dayC.cExt} externo</em></div>
+              <div className="mini"><span>Presença do dia</span><b style={{ color: presTone(dayC) }}>{postosOf(dayC) ? fmtPct(presencaPct(dayC)) : "—"}</b><em>{fmtNum(postosOf(dayC) - dayC.semW)} de {postosOf(dayC)} postos assegurados</em></div>
+              <div className="mini"><span>Faltas</span><b>{totalAusencias(dayC)}</b><em>{totalRepostas(dayC)} com backup · {fmtNum(dayC.semW)} sem</em></div>
+              <div className="mini"><span>Sem reposição</span><b style={{ color: dayC.sem ? "#b91c1c" : undefined }}>{fmtNum(dayC.semW)}</b><em>só estas baixam a presença</em></div>
+              <div className="mini"><span>Backups enviados</span><b>{totalRepostas(dayC)}</b><em>{dayC.cInt} interno · {dayC.cExt} externo</em></div>
             </div>
           </>
         )}
@@ -2857,7 +2876,8 @@ function DailyRegisterView({ params }) {
                               </div>
                               <div className="flex items-center gap-2 flex-wrap mt-1">
                                 <StatusChip val={r.val} auto={r.auto} storeName={r.kind === "pool" ? storeName(r.val) : ""} />
-                                {cov && <span className="st-chip" style={{ background: COB_COLOR[cov.cob] + "1c", color: COB_COLOR[cov.cob] }} title={cov.cobDate && cov.cobDate !== date ? `Emparelhado com um backup de ${fmtDMY(cov.cobDate)} (regra: mesmo dia → semana → mês)` : "Regra de emparelhamento da grelha"}>{COB_LABEL[cov.cob]}{cov.cobDate && cov.cobDate !== date ? ` (${fmtDMY(cov.cobDate).slice(0, 5)})` : ""}</span>}
+                                {cov && cov.st === "Pool" && cov.covers && <span className="st-chip" style={{ background: "#ccfbf1", color: "#0f766e" }}>Repôs {cov.covers}</span>}
+                                {cov && cov.st !== "Pool" && cov.cob && <span className="st-chip" style={{ background: COB_COLOR[cov.cob] + "1c", color: COB_COLOR[cov.cob] }}>{cov.cob === "sem" ? "✕ Sem reposição" : "✓ " + covLabel(cov)}</span>}
                                 {r.kind === "unknown" && <span className="st-chip" style={{ background: "#fef3c7", color: "#92400e" }}>Valor desconhecido: {r.val}</span>}
                                 {note && <span className="text-[11px] text-[var(--text-secondary)] italic truncate max-w-[280px]" title={note}>“{note}”</span>}
                               </div>
@@ -2927,167 +2947,304 @@ function DailyRegisterView({ params }) {
 }
 
 /* ====================================================================== */
-/* CENTRO DE COMANDO                                                       */
+/* RELATÓRIO DO DIA — cartão por cliente pronto para o WhatsApp            */
 /* ====================================================================== */
-function AlertMini({ a, unread, onOpen }) {
+const presTone = (c) => { const p = presencaPct(c); return p === null ? "#64748b" : c.sem === 0 ? "#15803d" : p >= 95 ? "#b45309" : "#b91c1c"; };
+const slugify = (s) => normTxt(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const fmtHM = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+
+async function captureCard(el) {
+  for (let i = 0; i < 40 && typeof window.html2canvas === "undefined"; i++) await new Promise((r) => setTimeout(r, 150));
+  if (typeof window.html2canvas === "undefined") throw new Error("A biblioteca de imagem não carregou. Verifica a ligação e tenta de novo.");
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+  const canvas = await window.html2canvas(el, { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
+  return await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar a imagem."))), "image/png"));
+}
+const canShareFiles = (() => {
+  try { return typeof navigator !== "undefined" && !!navigator.canShare && navigator.canShare({ files: [new File([""], "x.png", { type: "image/png" })] }); } catch (e) { return false; }
+})();
+
+function waText(r, date, showPresent) {
+  const c = r.c, p = presencaPct(c);
+  const L = [];
+  L.push(`*${r.nome.toUpperCase()} — Presenças ${fmtDMY(date)}*`);
+  L.push(`Presença: *${p === null ? "—" : fmtPct(p)}*`);
+  L.push(`✅ Presentes: ${c.ok} de ${postosOf(c)} postos`);
+  L.push(`🔁 Faltas repostas com backup: ${totalRepostas(c)}${totalRepostas(c) ? ` (${c.cInt} interno · ${c.cExt} externo)` : ""}`);
+  L.push(`❌ Faltas sem reposição: ${fmtNum(c.semW)}`);
+  r.stores.forEach((s) => {
+    L.push("");
+    L.push(`*${s.nome}* — ${fmtPct(presencaPct(s.c))}`);
+    if (!s.abs.length) L.push("• Sem faltas");
+    s.abs.slice().sort((a, b) => a.emp.localeCompare(b.emp)).forEach((a) => L.push(`• ${a.emp}: ${absLabel(a).toLowerCase()} → ${a.cob === "sem" ? "❌ sem reposição" : "✅ " + covLabel(a).toLowerCase()}`));
+    if (showPresent && s.present.length) L.push(`Presentes: ${s.present.slice().sort().join(", ")}`);
+    if (s.pending) L.push(`⚠️ ${s.pending} por confirmar`);
+  });
+  return L.join("\n");
+}
+
+function ReportCard({ r, date, showPresent, registerRef }) {
+  const ops = useOps();
+  const ref = useRef(null);
+  const [busy, setBusy] = useState("");
+  useEffect(() => { if (registerRef) registerRef(r.id, ref, r.nome); }, [r.id]);
+  const c = r.c, p = presencaPct(c), postos = postosOf(c);
+  const file = () => `presencas-${slugify(r.nome)}-${date}.png`;
+  const run = async (kind) => {
+    setBusy(kind);
+    try {
+      if (kind === "text") { await navigator.clipboard.writeText(waText(r, date, showPresent)); ops.toast("success", `Texto de ${r.nome} copiado — cola no grupo do WhatsApp.`); return; }
+      const blob = await captureCard(ref.current);
+      if (kind === "share") { await navigator.share({ files: [new File([blob], file(), { type: "image/png" })], title: `Presenças ${r.nome} ${fmtDMY(date)}` }); return; }
+      if (kind === "copy") {
+        if (!navigator.clipboard || typeof window.ClipboardItem === "undefined") throw new Error("Este navegador não permite copiar imagens. Usa “PNG” e anexa no WhatsApp.");
+        await navigator.clipboard.write([new window.ClipboardItem({ "image/png": blob })]);
+        ops.toast("success", `Imagem de ${r.nome} copiada — no grupo do WhatsApp faz Ctrl+V.`); return;
+      }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file(); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    } catch (e) { if (e && e.name !== "AbortError") ops.toast("error", String((e && e.message) || e)); }
+    finally { setBusy(""); }
+  };
   return (
-    <button onClick={onOpen} className="alert-mini" style={{ borderLeftColor: PRIO[a.sev].color }}>
-      <div className="flex items-center gap-2 mb-0.5"><PrioBadge sev={a.sev} />{unread && <span className="new-dot" title="Novo" />}<span className="text-[11px] text-[var(--text-secondary)] ml-auto truncate">{a.period}</span></div>
-      <div className="text-[13px] font-bold truncate text-left">{a.title}</div>
-      <div className="text-[11.5px] text-[var(--text-secondary)] text-left line-clamp-2">{a.action}</div>
-    </button>
+    <div className="report-wrap">
+      <div ref={ref} className="wa-card">
+        <div className="wa-top">
+          <div className="wa-brand"><BrandMark size={28} /><div><b>Delivery Express</b><span>Presenças · Colaboradores</span></div></div>
+          <div className="wa-date">{fmtLongDate(date)}</div>
+        </div>
+        <div className="wa-client" style={{ borderLeftColor: r.cor }}>
+          <div className="min-w-0"><div className="wa-label">Cliente</div><div className="wa-client-name">{r.nome}</div></div>
+          <div className="wa-pct" style={{ color: presTone(c) }}>{p === null ? "—" : fmtPct(p)}<small>presença no dia</small></div>
+        </div>
+        <div className="wa-stats">
+          <div><b>{postos}</b><span>Postos previstos</span></div>
+          <div><b>{c.ok}</b><span>Presentes</span></div>
+          <div className={totalRepostas(c) ? "ok" : ""}><b>{totalRepostas(c)}</b><span>Faltas repostas com backup</span></div>
+          <div className={c.sem ? "bad" : ""}><b>{fmtNum(c.semW)}</b><span>Faltas sem reposição</span></div>
+        </div>
+        {totalAusencias(c) === 0 && postos > 0 && <div className="wa-allgood">✓ Sem faltas — todos os postos assegurados</div>}
+        {totalAusencias(c) > 0 && c.sem === 0 && <div className="wa-allgood">✓ Todas as faltas foram repostas com backup</div>}
+        <div className="wa-stores">
+          {r.stores.map((s) => {
+            const sp = presencaPct(s.c), sPost = postosOf(s.c);
+            return (
+              <div key={s.id} className="wa-store">
+                <div className="wa-store-head">
+                  <span className="wa-store-name">{s.nome}</span>
+                  <span className="wa-store-meta">{fmtNum(sPost - s.c.semW)}/{sPost} postos assegurados</span>
+                  <span className="wa-store-pct" style={{ color: presTone(s.c) }}>{sp === null ? "—" : fmtPct(sp)}</span>
+                </div>
+                {s.abs.slice().sort((a, b) => (a.cob === "sem" ? 0 : 1) - (b.cob === "sem" ? 0 : 1) || a.emp.localeCompare(b.emp)).map((a, i) => (
+                  <div key={a.empId + i} className="wa-abs">
+                    <span className="wa-name">{a.emp}</span>
+                    <span className="wa-type">{absLabel(a)}</span>
+                    <span className={`wa-cov ${a.cob === "sem" ? "bad" : "ok"}`}>{a.cob === "sem" ? "✕ Sem reposição" : "✓ " + covLabel(a)}</span>
+                  </div>
+                ))}
+                {showPresent && s.present.length > 0 && <div className="wa-present"><b>Presentes:</b> {s.present.slice().sort().join(", ")}</div>}
+                {s.pending > 0 && <div className="wa-pending">⚠ {s.pending} por confirmar</div>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="wa-foot">Presença = postos assegurados ÷ postos previstos. Faltas repostas com backup interno ou externo não reduzem a presença. · Atualizado às {fmtHM(new Date())}</div>
+      </div>
+      <div className="report-actions">
+        {r.pending > 0 && <span className="text-[11px] font-semibold text-amber-600 mr-auto">{r.pending} por confirmar</span>}
+        <button onClick={() => run("copy")} disabled={!!busy} className="btn btn-primary btn-sm"><Icon path={busy === "copy" ? ICONS.refresh : ICONS.layers} size={14} className={busy === "copy" ? "spin" : ""} />Copiar imagem</button>
+        {canShareFiles && <button onClick={() => run("share")} disabled={!!busy} className="btn btn-primary btn-sm"><Icon path={ICONS.arrowRight} size={14} />Partilhar</button>}
+        <button onClick={() => run("png")} disabled={!!busy} className="btn btn-ghost btn-sm"><Icon path={ICONS.download} size={14} />PNG</button>
+        <button onClick={() => run("text")} disabled={!!busy} className="btn btn-ghost btn-sm"><Icon path={ICONS.file} size={14} />Copiar texto</button>
+      </div>
+    </div>
   );
+}
+
+function DayReportView({ params }) {
+  const ops = useOps();
+  const { stores, employees, clients } = ops;
+  const [date, setDate] = useState((params && params.date) || todayISO());
+  const [sel, setSel] = useState((params && params.clientId) || "");
+  const [showPresent, setShowPresent] = useState(() => { try { return localStorage.getItem("opsShowPresent") === "1"; } catch (e) { return false; } });
+  const [allBusy, setAllBusy] = useState(false);
+  const refs = useRef({});
+  const mk = mkOfISO(date);
+  const months = useMemo(() => [mk], [mk]);
+  const data = useOpsData({ months, stores, employees, clients, getScheduleForMonth: ops.getScheduleForMonth, enabled: ops.refsReady });
+  const ready = data.status === "ready";
+  const reports = useMemo(() => (ready ? buildDayReports({ iso: date, recs: data.recs, employees, stores, clients, cells: data.schedules[mk] }) : []), [ready, date, data.recs, data.schedules, employees, stores, clients, mk]);
+  const shown = reports.filter((r) => !sel || r.id === sel);
+  const pend = reports.reduce((a, r) => a + r.pending, 0);
+  const setSP = (v) => { setShowPresent(v); try { localStorage.setItem("opsShowPresent", v ? "1" : "0"); } catch (e) {} };
+  const downloadAll = async () => {
+    setAllBusy(true);
+    try {
+      for (const r of shown) {
+        const x = refs.current[r.id]; if (!x || !x.ref.current) continue;
+        const blob = await captureCard(x.ref.current);
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `presencas-${slugify(r.nome)}-${date}.png`; a.click();
+        await new Promise((res) => setTimeout(res, 350));
+      }
+    } catch (e) { ops.toast("error", String(e.message || e)); }
+    setAllBusy(false);
+  };
+  return (
+    <div className="page fade-in">
+      <PageHeader eyebrow="Operação" title="Relatório do Dia" subtitle="Um cartão por cliente, pronto a copiar e enviar no grupo de WhatsApp do cliente."
+        right={<DateNav date={date} setDate={setDate} />} />
+      {ready && pend > 0 && (
+        <div className="banner banner-warn mb-4">
+          <Icon path={ICONS.alert} size={16} />
+          <span className="flex-1">{pend} colaborador(es) ainda por confirmar neste dia — confirma antes de enviar (aparece no cartão como “por confirmar”).</span>
+          <button onClick={() => ops.nav("daily", { date, filter: "pendentes", clientId: sel || "" })} className="btn btn-ghost btn-sm">Confirmar agora</button>
+        </div>
+      )}
+      <div className="toolbar mb-4">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0 basis-full lg:basis-0">
+          <button onClick={() => setSel("")} className={`cchip ${!sel ? "on" : ""}`}>Todos os clientes</button>
+          {reports.map((r) => (
+            <button key={r.id} onClick={() => setSel(sel === r.id ? "" : r.id)} className={`cchip ${sel === r.id ? "on" : ""}`}>
+              <i style={{ background: r.cor }} />{r.nome}<span className={r.c.sem ? "bad" : ""}>{fmtPct(presencaPct(r.c))}</span>
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] cursor-pointer whitespace-nowrap"><input type="checkbox" checked={showPresent} onChange={(e) => setSP(e.target.checked)} />Mostrar nomes dos presentes</label>
+        {shown.length > 1 && <button onClick={downloadAll} disabled={allBusy} className="btn btn-ghost btn-sm"><Icon path={allBusy ? ICONS.refresh : ICONS.download} size={14} className={allBusy ? "spin" : ""} />Descarregar todos ({shown.length})</button>}
+      </div>
+      {!ready ? <Skeleton rows={4} /> : shown.length === 0 ? (
+        <div className="card"><EmptyState icon={ICONS.calendar} title="Sem registos neste dia" text="Nenhum cliente ativo tem colaboradores esperados ou registos nesta data." action={<button onClick={() => ops.nav("daily", { date })} className="btn btn-primary">Abrir Registo Diário</button>} /></div>
+      ) : (
+        <div className="report-grid">
+          {shown.map((r) => <ReportCard key={r.id + date} r={r} date={date} showPresent={showPresent} registerRef={(id, ref, nome) => { refs.current[id] = { ref, nome }; }} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ====================================================================== */
+/* CENTRO DE COMANDO — quem teve faltas, quem foi reposto, de que clientes */
+/* ====================================================================== */
+function periodRange(mode, date) {
+  if (mode === "7d") return [shiftISO(date, -6), date];
+  if (mode === "mes") return [`${mkOfISO(date)}-01`, date];
+  return [date, date];
+}
+function summarizeClients(recs, clients) {
+  const map = new Map();
+  recs.forEach((r) => {
+    if (r.st === "Pool") return;
+    const id = r.clientId || "_none";
+    let C = map.get(id);
+    if (!C) { const cl = clients.find((x) => x.id === r.clientId); C = { id, nome: r.client, cor: r.clientCor, c: emptyCounts(), abs: [], stores: new Map() }; map.set(id, C); }
+    addRec(C.c, r);
+    if (isAbsence(r)) C.abs.push(r);
+    let S = C.stores.get(r.storeId || "_none");
+    if (!S) { S = { id: r.storeId || "_none", nome: r.store, c: emptyCounts(), abs: [] }; C.stores.set(S.id, S); }
+    addRec(S.c, r); if (isAbsence(r)) S.abs.push(r);
+  });
+  return [...map.values()].filter((C) => postosOf(C.c) > 0).map((C) => ({ ...C, stores: [...C.stores.values()].filter((S) => postosOf(S.c) > 0).sort((a, b) => a.nome.localeCompare(b.nome)) }));
 }
 
 function CommandCenterView() {
   const ops = useOps();
   const { stores, employees, clients } = ops;
   const [date, setDate] = useState(todayISO());
-  const mk = mkOfISO(date);
-  const months = useMemo(() => [shiftMonth(mk, -1), mk], [mk]);
+  const [mode, setMode] = useState("dia");
+  const [from, to] = periodRange(mode, date);
+  const months = useMemo(() => [...new Set([mkOfISO(from), mkOfISO(to)])], [from, to]);
   const data = useOpsData({ months, stores, employees, clients, getScheduleForMonth: ops.getScheduleForMonth, enabled: ops.refsReady });
   const ready = data.status === "ready";
-  const activeCli = useCallback((cid) => { const c = clients.find((x) => x.id === cid); return !c || c.ativo !== false; }, [clients]);
-
-  const rows = useMemo(() => (ready ? buildDayRoster({ iso: date, employees, stores, clients, cells: data.schedules[mk] || {} }) : []), [ready, date, employees, stores, clients, data.schedules, mk]);
-  const st = useMemo(() => rosterStats(rows), [rows]);
-  const recs = useMemo(() => data.recs.filter((r) => activeCli(r.clientId)), [data.recs, activeCli]);
-  const dayRecs = useMemo(() => recs.filter((r) => r.date === date), [recs, date]);
-  const c = useMemo(() => countRecs(dayRecs), [dayRecs]);
-  const base = (cc) => cc.ok + cc.falta + cc.meia + cc.abandono + cc.bkpInt + cc.bkpExt + cc.pool;
-  const prevIso = shiftISO(date, -7);
-  const prevAvail = !!data.monthHasData[mkOfISO(prevIso)];
-  const pc = useMemo(() => countRecs(recs.filter((r) => r.date === prevIso)), [recs, prevIso]);
-
-  const cliRows = useMemo(() => {
-    const m = new Map();
-    rows.forEach((r) => {
-      const id = r.client ? r.client.id : "_none";
-      let e = m.get(id); if (!e) { e = { id, nome: r.client ? r.client.nome : "Sem cliente", cor: r.client ? r.client.cor : "#9ca3af", rows: [], c: emptyCounts() }; m.set(id, e); }
-      e.rows.push(r);
-    });
-    dayRecs.forEach((r) => { const e = m.get(r.clientId || "_none"); if (e) addRec(e.c, r); });
-    return [...m.values()].map((e) => ({ ...e, s: rosterStats(e.rows) })).sort((a, b) => b.c.sem - a.c.sem || totalFaltas(b.c) - totalFaltas(a.c) || b.s.pending - a.s.pending || a.nome.localeCompare(b.nome));
-  }, [rows, dayRecs]);
-
-  const trend = useMemo(() => {
-    if (!ready) return [];
-    return Array.from({ length: 14 }, (_, i) => {
-      const iso = shiftISO(date, i - 13);
-      const mki = mkOfISO(iso);
-      const has = !!data.monthHasData[mki];
-      const rr = has ? buildDayRoster({ iso, employees, stores, clients, cells: data.schedules[mki] || {} }) : [];
-      const ss = rosterStats(rr);
-      const cc = countRecs(recs.filter((r) => r.date === iso));
-      const absC = recs.filter((r) => r.date === iso && ABS_TYPES.includes(r.st));
-      return { iso, has, ss, cc, cov: absC.filter((r) => r.cob === "int" || r.cob === "ext").length, sem: absC.filter((r) => r.cob === "sem").length };
-    });
-  }, [ready, date, data.schedules, data.monthHasData, employees, stores, clients, recs]);
-
-  const trendChart = useMemo(() => ({
-    labels: trend.map((t) => `${DIAS_SEMANA[parseISO(t.iso).getDay()]} ${t.iso.slice(8)}`),
-    datasets: [
-      { type: "bar", label: "Ausências c/ backup", data: trend.map((t) => (t.has ? t.cov : null)), backgroundColor: "#14b8a6", stack: "a", yAxisID: "y", borderRadius: 3 },
-      { type: "bar", label: "Ausências sem backup", data: trend.map((t) => (t.has ? t.sem : null)), backgroundColor: "#ef4444", stack: "a", yAxisID: "y", borderRadius: 3 },
-      { type: "line", label: "Conclusão do registo %", data: trend.map((t) => (t.has ? t.ss.completion : null)), borderColor: "#4361ee", backgroundColor: "#4361ee", yAxisID: "y1", tension: 0.3, pointRadius: 2.5, spanGaps: false },
-    ],
-  }), [trend]);
-  const trendOpts = { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: "ausências", font: { size: 10 } } }, y1: { position: "right", min: 0, max: 100, grid: { display: false }, ticks: { callback: (v) => v + "%" } } }, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } } };
-
-  const pendDays = trend.filter((t) => t.has && t.iso <= todayISO() && t.ss.pending > 0 && t.iso !== date).slice(-7).reverse();
-  const recurring = useMemo(() => {
-    const from = shiftISO(date, -6);
-    const m = groupCount(recs.filter((r) => ABS_TYPES.includes(r.st) && r.date >= from && r.date <= date), (r) => r.empId);
-    return [...m.values()].filter((e) => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 8);
-  }, [recs, date]);
-  const topAlerts = ops.alerts.filter((a) => a.sev !== "info").slice(0, 5);
-
-  const delta = (cur, prev) => { if (!prevAvail) return null; const d = cur - prev; return d === 0 ? <span className="text-[var(--text-secondary)]">= mesmo dia sem. anterior</span> : <span style={{ color: d > 0 ? "#dc2626" : "#16a34a" }}>{d > 0 ? "▲" : "▼"} {Math.abs(d)} vs {DIAS_SEMANA[parseISO(prevIso).getDay()]} {fmtDMY(prevIso).slice(0, 5)}</span>; };
-  const pres = base(c) >= MIN_DAY_SAMPLE ? presencaPct(c) : null;
-  const go = (filter, clientId) => ops.nav("daily", { date, filter, clientId: clientId || "" });
+  const activeClients = clients.filter((c) => c.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome));
+  const activeIds = new Set(activeClients.map((c) => c.id));
+  const recs = useMemo(() => data.recs.filter((r) => r.date >= from && r.date <= to && activeIds.has(r.clientId)), [data.recs, from, to, clients]);
+  const sums = useMemo(() => summarizeClients(recs, clients), [recs, clients]);
+  const total = useMemo(() => countRecs(recs), [recs]);
+  const pendingDay = useMemo(() => {
+    if (!ready || mode !== "dia") return null;
+    const rows = buildDayRoster({ iso: date, employees, stores, clients, cells: data.schedules[mkOfISO(date)] || {} });
+    return rows.filter((r) => r.kind === "pending" && !r.isPool).length;
+  }, [ready, mode, date, data.schedules, employees, stores, clients]);
+  const semList = sums.filter((s) => s.c.sem > 0).sort((a, b) => b.c.semW - a.c.semW);
+  const repList = sums.filter((s) => totalRepostas(s.c) > 0 && s.c.sem === 0).sort((a, b) => totalRepostas(b.c) - totalRepostas(a.c));
+  const okList = sums.filter((s) => totalAusencias(s.c) === 0);
+  const noData = activeClients.filter((c) => !sums.some((s) => s.id === c.id));
+  const p = presencaPct(total);
+  const periodTxt = mode === "dia" ? fmtLongDate(date) : `${fmtDMY(from)} a ${fmtDMY(to)}`;
+  const names = (arr, pred) => { const g = groupCount(arr.filter(pred), (r) => r.empId); return [...g.values()].map((e) => `${e.recs[0].emp}${e.n > 1 ? ` (${e.n})` : ""}`).join(", "); };
+  const openCli = (id) => (mode === "dia" ? ops.nav("report", { date, clientId: id }) : ops.nav("analyses", { clientId: id }));
 
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Operação" title="Centro de Comando" subtitle={`Situação das presenças · ${fmtLongDate(date)}`}
-        right={<><DateNav date={date} setDate={setDate} /><button onClick={() => go("todos")} className="btn btn-primary"><Icon path={ICONS.calendarCheck} size={15} />Abrir registo do dia</button></>} />
-      {(data.status === "loading") && <Skeleton rows={5} />}
-      {data.status === "error" && <StateBox status="error" error={data.error} onRetry={data.reload} />}
-      {ready && (
+      <PageHeader eyebrow="Direção" title="Centro de Comando" subtitle={`Faltas e reposições por cliente · ${periodTxt}`}
+        right={<><Seg value={mode} onChange={setMode} size="sm" options={[["dia", "Dia"], ["7d", "7 dias"], ["mes", "Mês até à data"]]} /><DateNav date={date} setDate={setDate} /></>} />
+
+      <div className="scope mb-5">
+        <Icon path={ICONS.info} size={16} className="shrink-0 mt-0.5" />
+        <div>
+          <b>Âmbito destes números:</b> apenas os {activeClients.length} clientes registados neste software — {activeClients.map((c) => c.nome).join(", ") || "nenhum"}. Outras operações da Delivery Express não estão incluídas.
+          {ready && noData.length > 0 && <span className="block mt-0.5 text-[var(--text-secondary)]">Sem registos no período: {noData.map((c) => c.nome).join(", ")}.</span>}
+        </div>
+      </div>
+
+      {data.status === "loading" ? <Skeleton rows={5} /> : data.status === "error" ? <StateBox status="error" error={data.error} onRetry={data.reload} /> : (
         <>
-          <div className="section-label">Processo — registo do dia</div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-            <Kpi label="Esperados" value={st.universe} sub={`colaboradores ativos em lojas de clientes ativos${st.na ? ` · ${st.na} sem preenchimento` : ""}`} icon={ICONS.users} def="Colaboradores ativos nesta data (desligados só até ao dia de saída), em lojas existentes de clientes ativos. Exclui células 'Sem preenchimento'." onClick={() => go("todos")} />
-            <Kpi label="Verificados" value={st.verified} sub="com situação registada (inclui folgas fixas)" icon={ICONS.check} tone="#16a34a" onClick={() => go("todos")} />
-            <Kpi label="Por verificar" value={st.pending} sub={st.pending ? "não confirmados — não são ausências" : "nenhum pendente"} icon={ICONS.clock} tone={st.pending ? "#d97706" : "#16a34a"} onClick={() => go("pendentes")} />
-            <Kpi label="Conclusão do registo" value={fmtPct(st.completion)} sub="verificados ÷ esperados" icon={ICONS.layers} tone="#4361ee" foot={<div className="mt-2"><ProgressBar segs={[{ n: st.verified, color: "#4361ee", label: "Verificados" }]} total={st.universe} h={6} /></div>} />
-          </div>
-          <div className="section-label">Operação — presença efetiva</div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <Kpi label="Taxa de presença" value={pres === null ? "—" : fmtPct(pres)} sub={pres === null ? `amostra insuficiente (< ${MIN_DAY_SAMPLE} registos de trabalho)` : `OK ÷ ${base(c)} (OK + ausências + backups)`} icon={ICONS.trendUp} tone="#16a34a" def="Mesma definição da Visão mensal: OK ÷ (OK + Falta + Meia Falta + Abandono + Backup Interno + Backup Externo + atribuições pool). Folga, Formação, Baixa e por verificar não entram." />
-            <Kpi label="Ausências" value={totalFaltas(c)} sub={<>{c.falta} falta · {c.meia} meia · {c.abandono} aband.<br />{delta(totalFaltas(c), totalFaltas(pc))}</>} icon={ICONS.userX} tone={totalFaltas(c) ? "#dc2626" : undefined} onClick={() => go("ocorrencias")} />
-            <Kpi label="Sem backup" value={c.sem} sub={<>ausências sem cobertura emparelhada<br />{delta(c.sem, pc.sem)}</>} icon={ICONS.alert} tone={c.sem ? "#dc2626" : "#16a34a"} onClick={() => go("ocorrencias")} def="Ausências que não emparelham com nenhum backup da mesma loja (mesmo dia → semana → mês). Regra original da aplicação." />
-            <Kpi label="Backups registados" value={c.cInt + c.cExt} sub={`${c.cInt} interno (incl. pool) · ${c.cExt} externo`} icon={ICONS.backup} tone="#0d9488" />
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+            <Kpi label="Presença" value={p === null ? "—" : fmtPct(p)} sub="postos assegurados ÷ previstos" tone={presTone(total)} icon={ICONS.check} def="Só faltas sem reposição baixam a presença. Faltas repostas com backup interno ou externo contam como posto assegurado." />
+            <Kpi label="Faltas" value={totalAusencias(total)} sub="colaboradores que faltaram" icon={ICONS.userX} />
+            <Kpi label="Repostas com backup" value={totalRepostas(total)} sub={`${total.cInt} interno · ${total.cExt} externo`} tone="#0f766e" icon={ICONS.backup} />
+            <Kpi label="Sem reposição" value={fmtNum(total.semW)} sub="ninguém foi colocado no lugar" tone={total.sem ? "#b91c1c" : "#15803d"} icon={ICONS.alert} />
+            <Kpi label={mode === "dia" ? "Por confirmar" : "Postos previstos"} value={mode === "dia" ? pendingDay ?? "—" : postosOf(total)} sub={mode === "dia" ? (pendingDay ? "registos em falta neste dia" : "registo do dia completo") : "no período"} tone={mode === "dia" && pendingDay ? "#b45309" : undefined} icon={ICONS.clock} onClick={mode === "dia" && pendingDay ? () => ops.nav("daily", { date, filter: "pendentes" }) : undefined} />
           </div>
 
-          <div className="grid xl:grid-cols-3 gap-5 mb-5">
-            <Card title="Clientes — situação do dia" className="xl:col-span-2" right={<span className="text-[11px] text-[var(--text-secondary)]">Ordenado por prioridade · clique para abrir</span>}>
-              {cliRows.length === 0 ? <EmptyState title="Sem colaboradores esperados" text="Não há colaboradores ativos alocados a lojas de clientes ativos nesta data." /> : (
-                <div className="overflow-x-auto -mx-1">
-                  <table className="tbl min-w-[620px]">
-                    <thead><tr><th>Cliente</th><th>Registo</th><th className="num">Pend.</th><th className="num">OK</th><th className="num">Ausências</th><th className="num">Sem bkp</th><th className="num">Backups</th><th></th></tr></thead>
-                    <tbody>
-                      {cliRows.map((r) => (
-                        <tr key={r.id} className="clickable" onClick={() => go(r.s.pending ? "pendentes" : "todos", r.id === "_none" ? "_none" : r.id)}>
-                          <td><span className="inline-flex items-center gap-2 font-bold"><span className="w-2 h-2 rounded-full" style={{ background: r.cor }} />{r.nome}</span></td>
-                          <td style={{ minWidth: 150 }}><div className="flex items-center gap-2"><div className="flex-1"><ProgressBar segs={[{ n: r.s.verified, color: r.s.pending ? "#4361ee" : "#16a34a", label: "verificados" }]} total={r.s.universe} h={6} /></div><span className="text-[11px] tabular-nums w-14 text-right">{r.s.verified}/{r.s.universe}</span></div></td>
-                          <td className="num" style={r.s.pending ? { color: "#d97706", fontWeight: 700 } : {}}>{r.s.pending}</td>
-                          <td className="num">{r.c.ok}</td>
-                          <td className="num" style={totalFaltas(r.c) ? { color: "#dc2626", fontWeight: 700 } : {}}>{totalFaltas(r.c)}</td>
-                          <td className="num" style={r.c.sem ? { color: "#dc2626", fontWeight: 800 } : {}}>{r.c.sem}</td>
-                          <td className="num">{r.c.cInt + r.c.cExt}</td>
-                          <td className="text-right"><Icon path={ICONS.chevronRight} size={14} className="text-[var(--text-secondary)]" /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+          <div className="grid lg:grid-cols-3 gap-4 mb-6">
+            <div className="cc-col cc-bad">
+              <div className="cc-head"><Icon path={ICONS.alert} size={16} />Faltas sem reposição<span>{semList.length}</span></div>
+              {semList.length === 0 ? <div className="cc-empty">Nenhum cliente ficou com faltas por repor.</div> : semList.map((s) => (
+                <button key={s.id} onClick={() => openCli(s.id)} className="cc-item">
+                  <div className="flex items-center gap-2"><i style={{ background: s.cor }} /><b>{s.nome}</b><span className="ml-auto cc-num bad">{fmtNum(s.c.semW)} sem reposição</span></div>
+                  <div className="cc-sub">Presença {fmtPct(presencaPct(s.c))}{totalRepostas(s.c) ? ` · ${totalRepostas(s.c)} reposta(s)` : ""}</div>
+                  <div className="cc-names">{names(s.abs, (r) => r.cob === "sem")}</div>
+                </button>
+              ))}
+            </div>
+            <div className="cc-col cc-ok">
+              <div className="cc-head"><Icon path={ICONS.backup} size={16} />Faltas repostas com backup<span>{repList.length}</span></div>
+              {repList.length === 0 ? <div className="cc-empty">Nenhum cliente com faltas totalmente repostas.</div> : repList.map((s) => (
+                <button key={s.id} onClick={() => openCli(s.id)} className="cc-item">
+                  <div className="flex items-center gap-2"><i style={{ background: s.cor }} /><b>{s.nome}</b><span className="ml-auto cc-num ok">{totalRepostas(s.c)} reposta(s)</span></div>
+                  <div className="cc-sub">{s.c.cInt} backup interno · {s.c.cExt} backup externo · presença {fmtPct(presencaPct(s.c))}</div>
+                  <div className="cc-names">{names(s.abs, () => true)}</div>
+                </button>
+              ))}
+            </div>
+            <div className="cc-col cc-neutral">
+              <div className="cc-head"><Icon path={ICONS.check} size={16} />Sem faltas<span>{okList.length}</span></div>
+              {okList.length === 0 ? <div className="cc-empty">Todos os clientes com registos tiveram pelo menos uma falta.</div> : (
+                <div className="flex flex-wrap gap-1.5">{okList.map((s) => <button key={s.id} onClick={() => openCli(s.id)} className="cchip"><i style={{ background: s.cor }} />{s.nome}<span>{postosOf(s.c)} postos</span></button>)}</div>
               )}
-            </Card>
-            <Card title="O que resolver primeiro" right={<button onClick={() => ops.nav("alerts")} className="text-xs font-semibold text-[var(--accent)]">Central de Alertas →</button>}>
-              {topAlerts.length === 0 ? <EmptyState icon={ICONS.check} title="Sem alertas prioritários" text="Nenhum alerta crítico, alto ou médio com os critérios atuais." /> : (
-                <div className="space-y-2">{topAlerts.map((a) => <AlertMini key={a.key} a={a} unread={ops.isUnread(a)} onOpen={() => ops.nav("alerts", { focus: a.key })} />)}</div>
-              )}
-            </Card>
-          </div>
-
-          <div className="grid xl:grid-cols-3 gap-5">
-            <Card title="Últimos 14 dias" className="xl:col-span-2" right={<span className="text-[11px] text-[var(--text-secondary)]">Dias de meses sem dados ficam em branco (não zero)</span>}>
-              <ChartCanvas type="bar" data={trendChart} options={trendOpts} height={260} />
-            </Card>
-            <div className="space-y-5">
-              <Card title="Dias anteriores por verificar">
-                {pendDays.length === 0 ? <div className="text-xs text-[var(--text-secondary)] py-2">Nenhum dia anterior com registos em falta nos últimos 14 dias.</div> : (
-                  <div className="space-y-1">{pendDays.map((t) => (
-                    <button key={t.iso} onClick={() => ops.nav("daily", { date: t.iso, filter: "pendentes" })} className="list-btn">
-                      <span className="font-semibold">{DIAS_SEMANA_FULL[parseISO(t.iso).getDay()]}, {fmtDMY(t.iso)}</span>
-                      <span className="ml-auto text-xs font-bold" style={{ color: "#d97706" }}>{t.ss.pending} por verificar</span>
-                      <Icon path={ICONS.chevronRight} size={13} />
-                    </button>
-                  ))}</div>
-                )}
-              </Card>
-              <Card title="Ausências repetidas (7 dias)">
-                {recurring.length === 0 ? <div className="text-xs text-[var(--text-secondary)] py-2">Nenhum colaborador com 2 ou mais ausências nos últimos 7 dias.</div> : (
-                  <div className="space-y-1">{recurring.map((e) => (
-                    <button key={e.k} onClick={() => ops.openEmployee(e.k)} className="list-btn">
-                      <span className="min-w-0 text-left"><span className="block font-semibold truncate">{e.recs[0].emp}</span><span className="block text-[11px] text-[var(--text-secondary)] truncate">{e.recs[0].client} · {e.recs[0].store}</span></span>
-                      <span className="ml-auto text-xs font-bold text-red-500 whitespace-nowrap">{e.n} aus.</span>
-                    </button>
-                  ))}</div>
-                )}
-              </Card>
             </div>
           </div>
+
+          <Card title={`Resumo por cliente · ${periodTxt}`} right={<span className="text-[11px] text-[var(--text-secondary)]">{mode === "dia" ? "Clique para abrir o cartão do cliente" : "Clique para abrir a análise do cliente"}</span>}>
+            {sums.length === 0 ? <EmptyState title="Sem registos no período" text="Ainda não há presenças registadas para os clientes ativos neste período." /> : (
+              <div className="overflow-x-auto -mx-1"><table className="tbl min-w-[720px]">
+                <thead><tr><th>Cliente</th><th className="num">Presença</th><th className="num">Postos</th><th className="num">Faltas</th><th className="num">Backup interno</th><th className="num">Backup externo</th><th className="num">Sem reposição</th><th></th></tr></thead>
+                <tbody>{sums.sort((a, b) => b.c.semW - a.c.semW || a.nome.localeCompare(b.nome)).map((s) => (
+                  <tr key={s.id} className="clickable" onClick={() => openCli(s.id)}>
+                    <td><span className="inline-flex items-center gap-2 font-bold"><span className="w-2 h-2 rounded-full" style={{ background: s.cor }} />{s.nome}</span></td>
+                    <td className="num font-extrabold" style={{ color: presTone(s.c) }}>{fmtPct(presencaPct(s.c))}</td>
+                    <td className="num">{postosOf(s.c)}</td>
+                    <td className="num">{totalAusencias(s.c)}</td>
+                    <td className="num">{s.c.cInt}</td>
+                    <td className="num">{s.c.cExt}</td>
+                    <td className="num" style={s.c.sem ? { color: "#b91c1c", fontWeight: 800 } : {}}>{fmtNum(s.c.semW)}</td>
+                    <td className="text-right"><Icon path={ICONS.chevronRight} size={14} className="text-[var(--text-secondary)]" /></td>
+                  </tr>
+                ))}</tbody>
+              </table></div>
+            )}
+          </Card>
         </>
       )}
     </div>
@@ -3095,46 +3252,39 @@ function CommandCenterView() {
 }
 
 /* ====================================================================== */
-/* CENTRAL DE ALERTAS                                                      */
+/* ALERTAS — só clientes com faltas sem reposição e motoristas reincidentes */
 /* ====================================================================== */
+function AlertMini({ a, unread, onOpen }) {
+  return (
+    <button onClick={onOpen} className="alert-mini" style={{ borderLeftColor: PRIO[a.sev].color }}>
+      <div className="flex items-center gap-2 mb-0.5"><PrioBadge sev={a.sev} />{unread && <span className="new-dot" title="Novo" />}<span className="text-[11px] text-[var(--text-secondary)] ml-auto truncate">{a.kind}</span></div>
+      <div className="text-[13px] font-bold truncate text-left">{a.title}</div>
+      <div className="text-[11.5px] text-[var(--text-secondary)] text-left line-clamp-2">{a.summary}</div>
+    </button>
+  );
+}
+
 function AlertCard({ a, open, onToggle, unread, reappeared, follow, readBy, onRead, onFollow }) {
   const ops = useOps();
   return (
     <div id={`alert-${a.key}`} className={`alert-card ${unread ? "unread" : ""}`} style={{ borderLeftColor: PRIO[a.sev].color }}>
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <PrioBadge sev={a.sev} />
-            <span className="text-[11px] font-bold text-[var(--text-secondary)]">{a.kind}</span>
-            {unread && <span className="tag tag-new">{reappeared ? "Novos dados" : "Novo"}</span>}
-            {follow && <span className="tag tag-blue"><Icon path={ICONS.flag} size={10} />Em acompanhamento</span>}
-            <span className="text-[11px] text-[var(--text-secondary)] ml-auto">{a.scope} · {a.period}</span>
-          </div>
-          <div className="text-[15px] font-extrabold leading-snug">{a.title}</div>
-          {a.entity && <div className="text-xs text-[var(--text-secondary)] mt-0.5">{a.entity}</div>}
-          <div className="alert-grid mt-3">
-            <div><span>Problema</span><p>{a.problem}</p></div>
-            <div><span>Contexto / evidência</span><p>{a.context}</p></div>
-            <div className="act"><span>Ação recomendada</span><p>{a.action}</p></div>
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap mt-3">
-            {(a.recs || a.people) && <button onClick={onToggle} className="btn btn-ghost btn-xs"><Icon path={ICONS.eye} size={13} />{open ? "Ocultar registos" : `Ver registos (${(a.recs || a.people).length})`}</button>}
-            {a.nav && <button onClick={() => (a.nav.view === "employee" ? ops.openEmployee(a.nav.params.empId) : ops.nav(a.nav.view, a.nav.params))} className="btn btn-ghost btn-xs"><Icon path={ICONS.arrowRight} size={13} />{a.nav.view === "daily" ? "Abrir no Registo Diário" : a.nav.view === "employee" ? "Abrir colaborador" : "Analisar"}</button>}
-            {unread ? <button onClick={onRead} className="btn btn-ghost btn-xs"><Icon path={ICONS.check} size={13} />Marcar como lido</button> : <span className="text-[11px] text-[var(--text-secondary)] px-1">Lido{readBy ? ` por ${readBy}` : ""}</span>}
-            <button onClick={onFollow} className="btn btn-ghost btn-xs"><Icon path={ICONS.flag} size={13} />{follow ? "Retirar acompanhamento" : "Acompanhar"}</button>
-          </div>
-        </div>
+      <div className="flex items-center gap-2 flex-wrap mb-1">
+        <PrioBadge sev={a.sev} />
+        <span className="text-[11px] font-bold text-[var(--text-secondary)]">{a.kind}</span>
+        {unread && <span className="tag tag-new">{reappeared ? "Novas faltas" : "Novo"}</span>}
+        {follow && <span className="tag tag-blue"><Icon path={ICONS.flag} size={10} />Em acompanhamento</span>}
+        <span className="text-[11px] text-[var(--text-secondary)] ml-auto">{a.period}</span>
       </div>
-      {open && (
-        <div className="mt-3">
-          {a.recs ? <OccurrenceTable items={a.recs} maxH={280} /> : (
-            <div className="overflow-auto rounded-lg border border-[var(--border-c)] max-h-[280px]">
-              <table className="tbl"><thead><tr><th>Colaborador</th><th>Cliente</th><th>Loja</th></tr></thead>
-                <tbody>{a.people.map((p) => <tr key={p.id} className="clickable" onClick={() => ops.openEmployee(p.id)}><td className="font-semibold">{p.nome}</td><td>{p.client}</td><td>{p.store}</td></tr>)}</tbody></table>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="text-[15px] font-extrabold leading-snug">{a.title}</div>
+      {a.entity && <div className="text-xs text-[var(--text-secondary)] mt-0.5">{a.entity}</div>}
+      <p className="text-[13px] mt-2 leading-relaxed">{a.summary}</p>
+      <div className="flex items-center gap-1.5 flex-wrap mt-3">
+        <button onClick={onToggle} className="btn btn-ghost btn-xs"><Icon path={ICONS.eye} size={13} />{open ? "Ocultar faltas" : `Ver faltas (${a.recs.length})`}</button>
+        {a.nav && <button onClick={() => (a.nav.view === "employee" ? ops.openEmployee(a.nav.params.empId) : ops.nav(a.nav.view, a.nav.params))} className="btn btn-ghost btn-xs"><Icon path={ICONS.arrowRight} size={13} />{a.nav.label}</button>}
+        {unread ? <button onClick={onRead} className="btn btn-ghost btn-xs"><Icon path={ICONS.check} size={13} />Marcar como lido</button> : <span className="text-[11px] text-[var(--text-secondary)] px-1">Lido{readBy ? ` por ${readBy}` : ""}</span>}
+        <button onClick={onFollow} className="btn btn-ghost btn-xs"><Icon path={ICONS.flag} size={13} />{follow ? "Retirar acompanhamento" : "Acompanhar"}</button>
+      </div>
+      {open && <div className="mt-3"><OccurrenceTable items={a.recs} maxH={280} /></div>}
     </div>
   );
 }
@@ -3142,11 +3292,9 @@ function AlertCard({ a, open, onToggle, unread, reappeared, follow, readBy, onRe
 function AlertCenterView({ params }) {
   const ops = useOps();
   const [tab, setTab] = useState("ativos");
-  const [fPrio, setFPrio] = useState("");
-  const [fState, setFState] = useState("");
   const [fKind, setFKind] = useState("");
+  const [fState, setFState] = useState("");
   const [fClient, setFClient] = useState("");
-  const [q, setQ] = useState("");
   const [open, setOpen] = useState({});
   const focus = params && params.focus;
   useEffect(() => {
@@ -3155,214 +3303,170 @@ function AlertCenterView({ params }) {
     setTimeout(() => { const el = document.getElementById(`alert-${focus}`); if (el) el.scrollIntoView({ behavior: "smooth", block: "center" }); }, 120);
   }, [focus]);
   const reads = ops.alertState.reads || {}, follows = ops.alertState.follow || {}, seen = ops.alertState.seen || {};
-  const kinds = [...new Set(ops.alerts.map((a) => a.kind))].sort();
-  const qn = normTxt(q);
   const list = ops.alerts.filter((a) => {
-    if (fPrio && a.sev !== fPrio) return false;
     if (fKind && a.kind !== fKind) return false;
     if (fClient && !(a.clientIds || []).includes(fClient)) return false;
     const un = ops.isUnread(a), fo = !!(follows[a.key] && follows[a.key].on);
     if (fState === "novos" && !un) return false;
-    if (fState === "lidos" && un) return false;
     if (fState === "acomp" && !fo) return false;
-    if (qn && !normTxt(`${a.title} ${a.entity || ""} ${a.problem} ${(a.recs || []).map((r) => r.emp).join(" ")} ${(a.people || []).map((p) => p.nome).join(" ")}`).includes(qn)) return false;
     return true;
   });
-  const counts = Object.keys(PRIO).reduce((o, k) => ({ ...o, [k]: ops.alerts.filter((a) => a.sev === k).length }), {});
+  const nCli = ops.alerts.filter((a) => a.kind === "Cliente com faltas sem reposição").length;
+  const nEmp = ops.alerts.length - nCli;
   const unreadN = ops.alerts.filter((a) => ops.isUnread(a)).length;
   const activeKeys = new Set(ops.alerts.map((a) => a.key));
-  const past = Object.entries(seen).filter(([k]) => !activeKeys.has(k)).map(([k, v]) => ({ key: k, ...v })).sort((a, b) => (b.last || 0) - (a.last || 0));
-  const clientName = (id) => (ops.clients.find((c) => c.id === id) || {}).nome || "—";
+  const past = Object.entries(seen).filter(([k]) => !activeKeys.has(k) && /^(cliSem|emp)\|/.test(k)).map(([k, v]) => ({ key: k, ...v })).sort((a, b) => (b.last || 0) - (a.last || 0));
+  return (
+    <div className="page fade-in">
+      <PageHeader eyebrow="Direção" title="Alertas" subtitle="Clientes com faltas sem reposição (7 dias) e motoristas que faltam com recorrência (30 dias)."
+        right={unreadN > 0 ? <button onClick={() => ops.markRead(list.filter((a) => ops.isUnread(a)))} className="btn btn-ghost"><Icon path={ICONS.checkAll} size={15} />Marcar visíveis como lidos</button> : null} />
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <button onClick={() => setFKind(fKind === "Cliente com faltas sem reposição" ? "" : "Cliente com faltas sem reposição")} className={`kpi kpi-click text-left ${fKind === "Cliente com faltas sem reposição" ? "ring-2 ring-red-400" : ""}`}><span className="kpi-label">Clientes sem reposição</span><div className="kpi-value" style={{ color: nCli ? "#b91c1c" : undefined }}>{nCli}</div></button>
+        <button onClick={() => setFKind(fKind === "Motorista reincidente" ? "" : "Motorista reincidente")} className={`kpi kpi-click text-left ${fKind === "Motorista reincidente" ? "ring-2 ring-amber-400" : ""}`}><span className="kpi-label">Motoristas reincidentes</span><div className="kpi-value" style={{ color: nEmp ? "#b45309" : undefined }}>{nEmp}</div></button>
+        <button onClick={() => setFState(fState === "novos" ? "" : "novos")} className={`kpi kpi-click text-left ${fState === "novos" ? "ring-2 ring-[var(--accent)]" : ""}`}><span className="kpi-label">Não lidos</span><div className="kpi-value" style={{ color: "var(--accent)" }}>{unreadN}</div></button>
+      </div>
+      <div className="toolbar mb-4">
+        <Seg value={tab} onChange={setTab} options={[["ativos", "Ativos", ops.alerts.length], ["historico", "Anteriores", past.length]]} />
+        {tab === "ativos" && <>
+          <select value={fState} onChange={(e) => setFState(e.target.value)} className="input w-auto"><option value="">Todos</option><option value="novos">Só novos</option><option value="acomp">Em acompanhamento</option></select>
+          <select value={fClient} onChange={(e) => setFClient(e.target.value)} className="input w-auto"><option value="">Todos os clientes</option>{ops.clients.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+        </>}
+      </div>
+      {tab === "ativos" ? (ops.alertsStatus === "loading" ? <Skeleton rows={3} /> : list.length === 0 ? (
+        <div className="card"><EmptyState icon={ICONS.check} title={ops.alerts.length ? "Nenhum alerta com estes filtros" : "Sem alertas"} text={ops.alerts.length ? "" : "Nenhum cliente com faltas por repor nos últimos 7 dias e nenhum motorista acima dos limites."} /></div>
+      ) : (
+        <div className="space-y-3">{list.map((a) => {
+          const rd = reads[a.key];
+          return <AlertCard key={a.key} a={a} open={!!open[a.key]} onToggle={() => setOpen((o) => ({ ...o, [a.key]: !o[a.key] }))} unread={ops.isUnread(a)} reappeared={!!rd && rd.sig !== a.sig}
+            readBy={rd && rd.sig === a.sig ? rd.user : ""} follow={!!(follows[a.key] && follows[a.key].on)} onRead={() => ops.markRead([a])} onFollow={() => ops.toggleFollow(a.key)} />;
+        })}</div>
+      )) : (
+        <div className="card overflow-hidden">
+          {past.length === 0 ? <EmptyState title="Sem alertas anteriores" /> : (
+            <div className="overflow-x-auto"><table className="tbl min-w-[640px]">
+              <thead><tr><th>Prioridade</th><th>Alerta</th><th>Período</th><th>Visto pela última vez</th></tr></thead>
+              <tbody>{past.slice(0, 300).map((p) => <tr key={p.key}><td><PrioBadge sev={p.sev in PRIO ? p.sev : "medio"} /></td><td className="font-semibold">{p.title}<div className="text-[11px] text-[var(--text-secondary)] font-normal">{p.kind}</div></td><td className="text-xs">{p.period}</td><td className="text-xs whitespace-nowrap">{p.last ? fmtDateTime(p.last) : "—"}</td></tr>)}</tbody>
+            </table></div>
+          )}
+        </div>
+      )}
+      <p className="text-[11px] text-[var(--text-secondary)] mt-4">Limites editáveis em Configurações. “Marcar como lido” só retira o indicador de novo; se surgirem novas faltas o alerta volta a aparecer como novo.</p>
+    </div>
+  );
+}
 
-  const exportAlerts = async () => {
-    try {
-      await exportXlsx(`alertas-${todayISO()}.xlsx`, [
-        { name: "Alertas ativos", rows: ops.alerts.map((a) => ({ Prioridade: PRIO[a.sev].label, Tipo: a.kind, Âmbito: a.scope, Período: a.period, Título: a.title, Entidade: a.entity || "", Problema: a.problem, Contexto: a.context, "Ação recomendada": a.action, Estado: ops.isUnread(a) ? "Novo" : "Lido", Acompanhamento: follows[a.key] && follows[a.key].on ? "Sim" : "Não", "Nº registos": (a.recs || a.people || []).length })) },
-        { name: "Alertas anteriores", rows: past.map((p) => ({ Tipo: p.kind, Prioridade: (PRIO[p.sev] || PRIO.info).label, Título: p.title, Período: p.period, "Visto pela 1.ª vez": p.first ? new Date(p.first).toLocaleString("pt-PT") : "", "Visto pela última vez": p.last ? new Date(p.last).toLocaleString("pt-PT") : "" })) },
-        { name: "Regras de prioridade", rows: PRIO_RULES.map(([p, r]) => ({ Prioridade: p, Critério: r })) },
-      ]);
-    } catch (e) { ops.toast("error", String(e.message || e)); }
+/* ====================================================================== */
+/* ANÁLISES — por cliente, motoristas reincidentes, backups enviados       */
+/* ====================================================================== */
+function AnalysisView({ params }) {
+  const ops = useOps();
+  const { stores, employees, clients } = ops;
+  const curMk = ops.monthOptions[ops.monthOptions.length - 1];
+  const [period, setPeriod] = useState(curMk);
+  const [open, setOpen] = useState((params && params.clientId) || null);
+  const [minFaltas, setMinFaltas] = useState(2);
+  const t = todayISO();
+  const range = period === "7d" ? [shiftISO(t, -6), t] : period === "30d" ? [shiftISO(t, -29), t] : [`${period}-01`, isoDate(Number(period.slice(0, 4)), Number(period.slice(5)) - 1, daysInMonth(Number(period.slice(0, 4)), Number(period.slice(5)) - 1))];
+  const evoEnd = period.length === 7 ? period : curMk;
+  const months = useMemo(() => [...new Set([...monthWindow(evoEnd, 6), mkOfISO(range[0]), mkOfISO(range[1])])].sort(), [evoEnd, range[0], range[1]]);
+  const data = useOpsData({ months, stores, employees, clients, getScheduleForMonth: ops.getScheduleForMonth, enabled: ops.refsReady });
+  const ready = data.status === "ready";
+  const inRange = useMemo(() => data.recs.filter((r) => r.date >= range[0] && r.date <= range[1] && r.date <= t), [data.recs, range[0], range[1]]);
+  const sums = useMemo(() => summarizeClients(inRange, clients).sort((a, b) => a.nome.localeCompare(b.nome)), [inRange, clients]);
+  const total = countRecs(inRange);
+  const periodLabel = period === "7d" ? "Últimos 7 dias" : period === "30d" ? "Últimos 30 dias" : monthLabelOf(period);
+  const reinc = useMemo(() => [...groupCount(inRange.filter(isAbsence), (r) => r.empId).values()].filter((e) => e.n >= minFaltas)
+    .map((e) => ({ ...e, sem: e.recs.filter((r) => r.cob === "sem").length, last: e.recs.map((r) => r.date).sort().pop() })).sort((a, b) => b.n - a.n || b.sem - a.sem), [inRange, minFaltas]);
+  const bkChart = useMemo(() => ({
+    labels: sums.map((s) => s.nome),
+    datasets: [
+      { label: "Backup interno", data: sums.map((s) => s.c.cInt), backgroundColor: "#0d9488", borderRadius: 4 },
+      { label: "Backup externo", data: sums.map((s) => s.c.cExt), backgroundColor: "#f59e0b", borderRadius: 4 },
+      { label: "Sem reposição", data: sums.map((s) => s.c.semW), backgroundColor: "#ef4444", borderRadius: 4 },
+    ],
+  }), [sums]);
+  const evo = (cid) => {
+    const m6 = monthWindow(evoEnd, 6);
+    return { labels: m6.map(monthShort), datasets: [{ label: "Presença %", data: m6.map((mk) => { if (!data.monthHasData[mk]) return null; const c = countRecs(data.recs.filter((r) => r.mk === mk && (r.clientId || "_none") === cid && r.date <= t)); return presencaPct(c); }), borderColor: "#4361ee", backgroundColor: "rgba(67,97,238,.12)", fill: true, tension: 0.3, pointRadius: 3, spanGaps: false }] };
   };
+  const evoOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 90, max: 100, ticks: { callback: (v) => v + "%" } }, x: { grid: { display: false } } } };
 
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Inteligência" title="Central de Alertas" subtitle="Problema → contexto → ação recomendada. Calculados a partir dos registos reais sempre que os dados mudam (não são notificações push)."
-        right={<>
-          {unreadN > 0 && <button onClick={() => ops.markRead(list.filter((a) => ops.isUnread(a)))} className="btn btn-ghost"><Icon path={ICONS.checkAll} size={15} />Marcar visíveis como lidos</button>}
-          <button onClick={exportAlerts} className="btn btn-ghost"><Icon path={ICONS.download} size={15} />Exportar</button>
-        </>} />
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        {Object.keys(PRIO).map((k) => (
-          <button key={k} onClick={() => setFPrio(fPrio === k ? "" : k)} className={`kpi kpi-click text-left ${fPrio === k ? "ring-2" : ""}`} style={fPrio === k ? { "--tw-ring-color": PRIO[k].color } : {}}>
-            <span className="kpi-label">{PRIO[k].label}</span><div className="kpi-value" style={{ color: counts[k] ? PRIO[k].color : undefined }}>{counts[k]}</div>
-          </button>
-        ))}
-        <button onClick={() => setFState(fState === "novos" ? "" : "novos")} className={`kpi kpi-click text-left ${fState === "novos" ? "ring-2 ring-[var(--accent)]" : ""}`}><span className="kpi-label">Não lidos</span><div className="kpi-value" style={{ color: "var(--accent)" }}>{unreadN}</div></button>
-      </div>
-      <div className="flex items-center gap-3 flex-wrap mb-4">
-        <Seg value={tab} onChange={setTab} options={[["ativos", "Ativos", ops.alerts.length], ["historico", "Anteriores", past.length], ["regras", "Regras"]]} />
-      </div>
-
-      {tab === "ativos" && (
+      <PageHeader eyebrow="Direção" title="Análises" subtitle={`Presença, faltas e backups por cliente · ${periodLabel}`}
+        right={<select value={period} onChange={(e) => setPeriod(e.target.value)} className="input w-auto">
+          <optgroup label="Período"><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option></optgroup>
+          <optgroup label="Mês">{[...ops.monthOptions].reverse().map((mk) => <option key={mk} value={mk}>{monthLabelOf(mk)}</option>)}</optgroup>
+        </select>} />
+      {!ready ? <StateBox status={data.status} error={data.error} onRetry={data.reload} /> : (
         <>
-          <div className="toolbar mb-3">
-            <div className="relative flex-1 min-w-[200px]"><Icon path={ICONS.search} size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Pesquisar por colaborador, loja, texto…" className="input pl-9" /></div>
-            <select value={fState} onChange={(e) => setFState(e.target.value)} className="input w-auto"><option value="">Todos os estados</option><option value="novos">Novos</option><option value="lidos">Lidos</option><option value="acomp">Em acompanhamento</option></select>
-            <select value={fKind} onChange={(e) => setFKind(e.target.value)} className="input w-auto"><option value="">Todos os tipos</option>{kinds.map((k) => <option key={k} value={k}>{k}</option>)}</select>
-            <select value={fClient} onChange={(e) => setFClient(e.target.value)} className="input w-auto"><option value="">Todos os clientes</option>{ops.clients.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <Kpi label="Presença" value={fmtPct(presencaPct(total))} sub="todos os clientes do software" tone={presTone(total)} />
+            <Kpi label="Faltas" value={totalAusencias(total)} sub={`${postosOf(total)} postos previstos`} />
+            <Kpi label="Backups enviados" value={totalRepostas(total)} sub={`${total.cInt} interno · ${total.cExt} externo`} tone="#0f766e" />
+            <Kpi label="Sem reposição" value={fmtNum(total.semW)} sub="faltas que baixaram a presença" tone={total.sem ? "#b91c1c" : "#15803d"} />
           </div>
-          <FilterChips items={[
-            { k: "p", on: !!fPrio, label: `Prioridade: ${fPrio && PRIO[fPrio].label}`, clear: () => setFPrio("") },
-            { k: "s", on: !!fState, label: `Estado: ${{ novos: "Novos", lidos: "Lidos", acomp: "Em acompanhamento" }[fState]}`, clear: () => setFState("") },
-            { k: "t", on: !!fKind, label: `Tipo: ${fKind}`, clear: () => setFKind("") },
-            { k: "c", on: !!fClient, label: `Cliente: ${clientName(fClient)}`, clear: () => setFClient("") },
-            { k: "q", on: !!q, label: `Pesquisa: “${q}”`, clear: () => setQ("") },
-          ]} onClearAll={() => { setFPrio(""); setFState(""); setFKind(""); setFClient(""); setQ(""); }} />
-          {ops.alertsStatus === "loading" ? <Skeleton rows={4} /> : list.length === 0 ? (
-            <div className="card"><EmptyState icon={ICONS.check} title={ops.alerts.length ? "Nenhum alerta com estes filtros" : "Sem alertas ativos"} text={ops.alerts.length ? "Remove filtros para ver os restantes." : "Os critérios atuais não identificaram situações que exijam atenção."} /></div>
-          ) : (
-            <div className="space-y-3">
-              {list.map((a) => {
-                const rd = reads[a.key];
-                return <AlertCard key={a.key} a={a} open={!!open[a.key]} onToggle={() => setOpen((o) => ({ ...o, [a.key]: !o[a.key] }))}
-                  unread={ops.isUnread(a)} reappeared={!!rd && rd.sig !== a.sig} readBy={rd && rd.sig === a.sig ? rd.user : ""}
-                  follow={!!(follows[a.key] && follows[a.key].on)} onRead={() => ops.markRead([a])} onFollow={() => ops.toggleFollow(a.key)} />;
-              })}
-            </div>
-          )}
+
+          <Card title="Por cliente" className="mb-5" right={<span className="text-[11px] text-[var(--text-secondary)]">Clique num cliente para ver lojas, faltas e evolução</span>}>
+            {sums.length === 0 ? <EmptyState title="Sem registos no período" /> : (
+              <div className="overflow-x-auto -mx-1"><table className="tbl min-w-[760px]">
+                <thead><tr><th>Cliente</th><th className="num">Presença</th><th className="num">Postos</th><th className="num">Faltas</th><th className="num">Com backup interno</th><th className="num">Com backup externo</th><th className="num">Sem reposição</th></tr></thead>
+                <tbody>{sums.map((s) => (
+                  <React.Fragment key={s.id}>
+                    <tr className={`clickable ${open === s.id ? "sel" : ""}`} onClick={() => setOpen(open === s.id ? null : s.id)}>
+                      <td><span className="inline-flex items-center gap-2 font-bold"><span style={{ display: "inline-flex", transform: open === s.id ? "none" : "rotate(-90deg)" }}><Icon path={ICONS.chevronDown} size={13} /></span><span className="w-2 h-2 rounded-full" style={{ background: s.cor }} />{s.nome}</span></td>
+                      <td className="num font-extrabold" style={{ color: presTone(s.c) }}>{fmtPct(presencaPct(s.c))}</td>
+                      <td className="num">{postosOf(s.c)}</td><td className="num">{totalAusencias(s.c)}</td>
+                      <td className="num">{s.c.cInt}</td><td className="num">{s.c.cExt}</td>
+                      <td className="num" style={s.c.sem ? { color: "#b91c1c", fontWeight: 800 } : {}}>{fmtNum(s.c.semW)}</td>
+                    </tr>
+                    {open === s.id && (
+                      <tr><td colSpan={7} className="bg-[var(--hover)]">
+                        <div className="grid lg:grid-cols-2 gap-5 py-2">
+                          <div>
+                            <div className="section-label">Lojas</div>
+                            <table className="tbl"><thead><tr><th>Loja</th><th className="num">Presença</th><th className="num">Faltas</th><th className="num">Backups</th><th className="num">Sem rep.</th></tr></thead>
+                              <tbody>{s.stores.map((x) => <tr key={x.id}><td className="font-semibold">{x.nome}</td><td className="num font-bold" style={{ color: presTone(x.c) }}>{fmtPct(presencaPct(x.c))}</td><td className="num">{totalAusencias(x.c)}</td><td className="num">{totalRepostas(x.c)}</td><td className="num" style={x.c.sem ? { color: "#b91c1c", fontWeight: 700 } : {}}>{fmtNum(x.c.semW)}</td></tr>)}</tbody></table>
+                          </div>
+                          <div>
+                            <div className="section-label">Presença mensal (6 meses)</div>
+                            <ChartCanvas type="line" data={evo(s.id)} options={evoOpts} height={180} />
+                          </div>
+                        </div>
+                        <div className="section-label mt-3">Faltas no período ({s.abs.length})</div>
+                        <OccurrenceTable items={s.abs} maxH={280} />
+                      </td></tr>
+                    )}
+                  </React.Fragment>
+                ))}</tbody>
+              </table></div>
+            )}
+          </Card>
+
+          <div className="grid xl:grid-cols-2 gap-5">
+            <Card title="Motoristas com reincidência" right={<label className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">Mínimo de faltas<select value={minFaltas} onChange={(e) => setMinFaltas(Number(e.target.value))} className="input input-xs w-14">{[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>}>
+              {reinc.length === 0 ? <EmptyState icon={ICONS.check} title="Ninguém acima do mínimo" text={`Nenhum motorista com ${minFaltas} ou mais faltas no período.`} /> : (
+                <div className="overflow-x-auto -mx-1"><table className="tbl min-w-[520px]">
+                  <thead><tr><th>Motorista</th><th>Cliente · Loja</th><th className="num">Faltas</th><th className="num">Sem rep.</th><th>Datas</th></tr></thead>
+                  <tbody>{reinc.map((e) => (
+                    <tr key={e.k} className="clickable" onClick={() => ops.openEmployee(e.k)}>
+                      <td className="font-semibold">{e.recs[0].emp}</td>
+                      <td className="text-xs text-[var(--text-secondary)]">{e.recs[0].client} · {e.recs[0].store}</td>
+                      <td className="num font-extrabold">{e.n}</td>
+                      <td className="num" style={e.sem ? { color: "#b91c1c", fontWeight: 700 } : {}}>{e.sem}</td>
+                      <td className="text-xs">{listDates(e.recs)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </Card>
+            <Card title="Backups enviados por cliente">
+              {sums.length === 0 ? <EmptyState title="Sem dados" /> : <ChartCanvas type="bar" data={bkChart} options={barStackOpts} height={Math.max(220, sums.length * 34)} />}
+              <p className="text-[11px] text-[var(--text-secondary)] mt-2">Cada falta reposta conta como um backup enviado (interno inclui atribuições da loja pool no mesmo dia e loja).</p>
+            </Card>
+          </div>
         </>
       )}
-
-      {tab === "historico" && (
-        <div className="card overflow-hidden">
-          {past.length === 0 ? <EmptyState title="Sem alertas anteriores" text="Quando um alerta deixa de se verificar (ex.: o registo foi completado), fica guardado aqui com as datas em que foi visto." /> : (
-            <div className="overflow-x-auto"><table className="tbl min-w-[720px]">
-              <thead><tr><th>Prioridade</th><th>Tipo</th><th>Alerta</th><th>Período</th><th>1.ª vez</th><th>Última vez</th><th>Leitura</th></tr></thead>
-              <tbody>{past.slice(0, 300).map((p) => <tr key={p.key}><td><PrioBadge sev={p.sev || "info"} /></td><td className="text-xs">{p.kind}</td><td className="font-semibold">{p.title}</td><td className="text-xs">{p.period}</td><td className="text-xs whitespace-nowrap">{p.first ? fmtDateTime(p.first) : "—"}</td><td className="text-xs whitespace-nowrap">{p.last ? fmtDateTime(p.last) : "—"}</td><td className="text-xs">{reads[p.key] ? `Lido por ${reads[p.key].user}` : "Não lido"}</td></tr>)}</tbody>
-            </table></div>
-          )}
-          <p className="text-[11px] text-[var(--text-secondary)] px-5 py-3 border-t border-[var(--border-c)]">Um alerta deixa de estar ativo quando a condição deixa de se verificar nos dados. Se voltar a verificar-se com dados diferentes, reaparece como “Novos dados”, mesmo que já tenha sido lido.</p>
-        </div>
-      )}
-
-      {tab === "regras" && (
-        <div className="grid lg:grid-cols-2 gap-5">
-          <Card title="Prioridades">
-            <div className="space-y-3">{PRIO_RULES.map(([p, r]) => <div key={p} className="flex gap-3"><div className="w-28 shrink-0"><PrioBadge sev={Object.keys(PRIO).find((k) => PRIO[k].label === p)} /></div><p className="text-sm text-[var(--text-secondary)]">{r}</p></div>)}</div>
-          </Card>
-          <Card title="Como funcionam">
-            <ul className="text-sm text-[var(--text-secondary)] space-y-2 list-disc pl-5">
-              <li>São recalculados no navegador a partir da grelha (schedule) sempre que há alterações sincronizadas.</li>
-              <li>Janela analisada: mês atual e 3 meses anteriores (para comparações). “Registos por verificar” olha para os últimos 7 dias; “Falta sem backup” para os últimos 7 dias; ausências consecutivas para 14 dias.</li>
-              <li>“Marcar como lido” apenas retira o indicador de novidade (fica registado quem leu). O alerta só desaparece quando os dados deixam de o justificar.</li>
-              <li>Os limites dos padrões recorrentes são configuráveis em Configurações.</li>
-              <li>Clientes inativos não geram alertas operacionais; o seu histórico mantém-se nas análises.</li>
-            </ul>
-          </Card>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ====================================================================== */
-/* ANÁLISES (hub) + TENDÊNCIA POR CLIENTE                                  */
-/* ====================================================================== */
-function trendOf(rates) {
-  // rates: array cronológico de {rate|null}; usa o último mês com amostra e a média dos ≤3 anteriores válidos
-  const valid = rates.map((r, i) => ({ ...r, i })).filter((r) => r.rate !== null);
-  const last = rates[rates.length - 1];
-  if (!last || last.rate === null) return { label: "Amostra insuficiente", tone: "#94a3b8" };
-  const prior = valid.filter((r) => r.i < rates.length - 1).slice(-3);
-  if (prior.length < 2) return { label: "Histórico insuficiente", tone: "#94a3b8" };
-  const avg = prior.reduce((a, r) => a + r.rate, 0) / prior.length;
-  const diff = Math.round((last.rate - avg) * 10) / 10;
-  const l3 = valid.slice(-3);
-  const consecutive = l3.length === 3 && l3[2].i === rates.length - 1 && l3[1].i === l3[2].i - 1 && l3[0].i === l3[1].i - 1;
-  if (consecutive && l3[0].rate < l3[1].rate && l3[1].rate < l3[2].rate && diff >= 3) return { label: "Deterioração sustentada", tone: "#dc2626", diff, avg };
-  if (consecutive && l3[0].rate > l3[1].rate && l3[1].rate > l3[2].rate && diff <= -3) return { label: "Melhoria sustentada", tone: "#16a34a", diff, avg };
-  if (diff >= 3) return { label: "Deterioração", tone: "#ea580c", diff, avg };
-  if (diff <= -3) return { label: "Melhoria", tone: "#16a34a", diff, avg };
-  return { label: "Estável", tone: "#64748b", diff, avg };
-}
-const workBase = (c) => c.ok + c.falta + c.meia + c.abandono + c.bkpInt + c.bkpExt + c.pool;
-
-function ClientTrendView() {
-  const ops = useOps();
-  const { stores, employees, clients } = ops;
-  const [endMk, setEndMk] = useState(ops.monthOptions[ops.monthOptions.length - 1]);
-  const [sel, setSel] = useState(null);
-  const months = useMemo(() => monthWindow(endMk, 6), [endMk]);
-  const data = useOpsData({ months, stores, employees, clients, getScheduleForMonth: ops.getScheduleForMonth, enabled: ops.refsReady });
-  const rows = useMemo(() => {
-    const m = new Map();
-    data.recs.forEach((r) => {
-      const id = r.clientId || "_none";
-      let e = m.get(id); if (!e) { e = { id, nome: r.client, cor: r.clientCor, by: {}, recs: [] }; m.set(id, e); }
-      if (!e.by[r.mk]) e.by[r.mk] = emptyCounts();
-      addRec(e.by[r.mk], r); e.recs.push(r);
-    });
-    return [...m.values()].map((e) => {
-      const rates = months.map((mk) => { const c = e.by[mk]; const b = c ? workBase(c) : 0; return { mk, b, abs: c ? totalFaltas(c) : 0, sem: c ? c.sem : 0, rate: data.monthHasData[mk] && b >= MIN_MONTH_SAMPLE ? pct1(c ? totalFaltas(c) : 0, b) : null }; });
-      const endAbs = e.recs.filter((r) => r.mk === endMk && ABS_TYPES.includes(r.st));
-      const byEmp = [...groupCount(endAbs, (r) => r.empId).values()].sort((a, b) => b.n - a.n);
-      const top3 = byEmp.slice(0, 3).reduce((a, x) => a + x.n, 0);
-      const conc = endAbs.length >= 5 ? Math.round((top3 / endAbs.length) * 100) : null;
-      return { ...e, rates, t: trendOf(rates), conc, topEmps: byEmp.slice(0, 3), endAbs };
-    }).sort((a, b) => (b.t.diff ?? -99) - (a.t.diff ?? -99) || a.nome.localeCompare(b.nome));
-  }, [data.recs, data.monthHasData, months, endMk]);
-  const selRow = rows.find((r) => r.id === sel);
-  return (
-    <div>
-      <div className="flex items-center gap-2 flex-wrap mb-4">
-        <span className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wide">Até:</span>
-        <select value={endMk} onChange={(e) => setEndMk(e.target.value)} className="input w-auto">{[...ops.monthOptions].reverse().map((mk) => <option key={mk} value={mk}>{monthLabelOf(mk)}</option>)}</select>
-      </div>
-      {data.status !== "ready" ? <StateBox status={data.status} error={data.error} onRetry={data.reload} /> : (
-        <Card title="Taxa de ausência por cliente · últimos 6 meses" right={<span className="text-[11px] text-[var(--text-secondary)]">Clique numa linha para ver registos</span>}>
-          <div className="overflow-x-auto">
-            <table className="tbl min-w-[900px]">
-              <thead><tr><th>Cliente</th>{months.map((mk) => <th key={mk} className="num">{monthShort(mk)}</th>)}<th>Tendência</th><th className="num">Δ vs média</th><th className="num" title="Percentagem das ausências do último mês concentrada nos 3 colaboradores com mais ausências (mín. 5 ausências)">Concentração top-3</th></tr></thead>
-              <tbody>{rows.map((r) => (
-                <tr key={r.id} className={`clickable ${sel === r.id ? "sel" : ""}`} onClick={() => setSel(sel === r.id ? null : r.id)}>
-                  <td><span className="inline-flex items-center gap-2 font-bold"><span className="w-2 h-2 rounded-full" style={{ background: r.cor }} />{r.nome}</span></td>
-                  {r.rates.map((x) => <td key={x.mk} className="num" title={`${x.abs} ausências em ${x.b} registos de trabalho · ${x.sem} sem backup`}>{x.rate === null ? <span className="text-[var(--text-secondary)]" title={data.monthHasData[x.mk] ? `amostra < ${MIN_MONTH_SAMPLE}` : "sem dados"}>{data.monthHasData[x.mk] ? "n<" + MIN_MONTH_SAMPLE : "—"}</span> : fmtPct(x.rate)}</td>)}
-                  <td><span className="tag" style={{ color: r.t.tone, background: r.t.tone + "14" }}>{r.t.label}</span></td>
-                  <td className="num" style={{ color: r.t.diff > 0 ? "#dc2626" : r.t.diff < 0 ? "#16a34a" : undefined }}>{r.t.diff === undefined ? "—" : `${r.t.diff > 0 ? "+" : ""}${String(r.t.diff).replace(".", ",")} pp`}</td>
-                  <td className="num">{r.conc === null ? "—" : `${r.conc}%`}</td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-          <p className="text-[11px] text-[var(--text-secondary)] mt-3 leading-relaxed">Taxa de ausência = (Falta + Meia Falta + Abandono) ÷ registos de trabalho (OK + ausências + Backup Interno + Backup Externo + atribuições pool). Só é calculada com ≥ {MIN_MONTH_SAMPLE} registos no mês. Tendência = último mês vs média dos até 3 meses anteriores válidos (±3 pp); “sustentada” = 3 meses consecutivos sempre a subir/descer. Valores absolutos no tooltip de cada célula. Tendências descrevem os dados, não causas.</p>
-          {selRow && (
-            <div className="mt-5">
-              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                <div className="text-sm font-bold">{selRow.nome} · ausências em {monthLabelOf(endMk)} ({selRow.endAbs.length})</div>
-                {selRow.topEmps.length > 0 && <div className="text-xs text-[var(--text-secondary)]">Mais ausências: {selRow.topEmps.map((e) => `${e.recs[0].emp} (${e.n})`).join(", ")}</div>}
-              </div>
-              <OccurrenceTable items={selRow.endAbs} />
-            </div>
-          )}
-        </Card>
-      )}
-    </div>
-  );
-}
-
-function AnalyticsHub({ params }) {
-  const ops = useOps();
-  const [tab, setTab] = useState((params && params.tab) || "mensal");
-  const common = { stores: ops.stores, employees: ops.employees, clients: ops.clients, getScheduleForMonth: ops.getScheduleForMonth, monthOptions: ops.monthOptions, refsReady: ops.refsReady };
-  return (
-    <div className="fade-in">
-      <div className="px-4 md:px-8 pt-6 md:pt-8">
-        <PageHeader eyebrow="Inteligência" title="Análises" subtitle="Padrões, recorrências e tendências a partir do histórico da grelha. Clique em linhas e clientes para ver os registos que compõem cada número." />
-        <Seg value={tab} onChange={setTab} options={[["mensal", "Visão mensal"], ["recorrencia", "Colaboradores e rankings"], ["tendencia", "Tendência por cliente"]]} />
-      </div>
-      {tab === "mensal" && <DashboardView {...common} embedded />}
-      {tab === "recorrencia" && <AnalysesView {...common} embedded />}
-      {tab === "tendencia" && <div className="page pt-5"><ClientTrendView /></div>}
     </div>
   );
 }
@@ -3460,8 +3564,8 @@ function ClientsHubView({ params }) {
       {data.status === "loading" ? <Skeleton rows={3} /> : cards.length === 0 ? <div className="card"><EmptyState title="Sem clientes" text="Cria o primeiro cliente para associar lojas e colaboradores." action={<button onClick={() => setModal({})} className="btn btn-primary"><Icon path={ICONS.plus} size={15} />Novo cliente</button>} /></div> : (
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {cards.map(({ c, cs, emps, cur, prv, al }) => {
-            const b = workBase(cur), pres = b >= MIN_MONTH_SAMPLE ? presencaPct(cur) : null;
-            const d = totalFaltas(cur) - totalFaltas(prv);
+            const b = postosOf(cur), pres = presencaPct(cur);
+            const d = cur.semW - prv.semW;
             const hasPrev = !!data.monthHasData[shiftMonth(mk, -1)];
             return (
               <button key={c.id} onClick={() => setSel(c.id)} className={`card card-hover text-left overflow-hidden ${c.ativo === false ? "opacity-70" : ""}`}>
@@ -3475,9 +3579,9 @@ function ClientsHubView({ params }) {
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="mini"><span>Presença</span><b>{pres === null ? "—" : fmtPct(pres)}</b><em>{pres === null ? (b ? `n=${b}` : "sem dados") : monthShort(mk)}</em></div>
-                    <div className="mini"><span>Ausências</span><b style={{ color: totalFaltas(cur) ? "#dc2626" : undefined }}>{totalFaltas(cur)}</b><em>{hasPrev ? (d === 0 ? "= mês ant." : <span style={{ color: d > 0 ? "#dc2626" : "#16a34a" }}>{d > 0 ? "▲" : "▼"}{Math.abs(d)} mês ant.</span>) : "—"}</em></div>
-                    <div className="mini"><span>Sem bkp</span><b style={{ color: cur.sem ? "#dc2626" : undefined }}>{cur.sem}</b><em>{cur.cInt + cur.cExt} c/ bkp</em></div>
+                    <div className="mini"><span>Presença</span><b style={{ color: presTone(cur) }}>{pres === null ? "—" : fmtPct(pres)}</b><em>{b ? `${b} postos` : "sem dados"}</em></div>
+                    <div className="mini"><span>Faltas</span><b>{totalAusencias(cur)}</b><em>{totalRepostas(cur)} com backup</em></div>
+                    <div className="mini"><span>Sem rep.</span><b style={{ color: cur.sem ? "#b91c1c" : undefined }}>{fmtNum(cur.semW)}</b><em>{hasPrev ? (d === 0 ? "= mês ant." : <span style={{ color: d > 0 ? "#b91c1c" : "#15803d" }}>{d > 0 ? "▲" : "▼"}{fmtNum(Math.abs(d))} mês ant.</span>) : "—"}</em></div>
                   </div>
                 </div>
               </button>
@@ -3499,32 +3603,33 @@ function ClientDrawer({ client, mk, data, onClose, onEdit, onToggle, onDelete })
   const recs = data.recs.filter((r) => r.clientId === client.id);
   const months = [shiftMonth(mk, -2), shiftMonth(mk, -1), mk];
   const al = ops.alerts.filter((a) => (a.clientIds || []).includes(client.id));
-  const occ = recs.filter((r) => r.mk === mk && (ABS_TYPES.includes(r.st) || r.st === "Backup Interno" || r.st === "Backup Externo" || r.st === "Pool"));
+  const occ = recs.filter((r) => r.mk === mk && isAbsence(r));
   return (
     <Drawer title={client.nome} subtitle={`${client.ativo === false ? "Inativo" : "Ativo"} · ${cs.length} loja(s)`} onClose={onClose}
       actions={<><button onClick={onEdit} className="btn btn-ghost btn-sm"><Icon path={ICONS.edit} size={13} />Editar</button><button onClick={onToggle} className="btn btn-ghost btn-sm"><Icon path={ICONS.power} size={13} />{client.ativo === false ? "Reativar" : "Desativar"}</button><button onClick={onDelete} className="icon-btn text-red-500" title="Eliminar"><Icon path={ICONS.trash} size={15} /></button></>}>
       <div className="flex gap-2 flex-wrap mb-5">
-        <button onClick={() => { onClose(); ops.nav("daily", { date: t, clientId: client.id }); }} className="btn btn-primary btn-sm"><Icon path={ICONS.calendarCheck} size={14} />Registo de hoje</button>
+        <button onClick={() => { onClose(); ops.nav("report", { date: t, clientId: client.id }); }} className="btn btn-primary btn-sm"><Icon path={ICONS.layers} size={14} />Relatório de hoje</button>
+        <button onClick={() => { onClose(); ops.nav("daily", { date: t, clientId: client.id }); }} className="btn btn-ghost btn-sm"><Icon path={ICONS.calendarCheck} size={14} />Registo de hoje</button>
         <button onClick={() => { onClose(); ops.nav("reports", { clientId: client.id }); }} className="btn btn-ghost btn-sm"><Icon path={ICONS.file} size={14} />Relatório do cliente</button>
       </div>
       <div className="section-label">Evolução (3 meses)</div>
       <div className="overflow-x-auto mb-6"><table className="tbl">
-        <thead><tr><th>Mês</th><th className="num">Registos trab.</th><th className="num">Presença</th><th className="num">Ausências</th><th className="num">Taxa aus.</th><th className="num">Sem bkp</th><th className="num">Backups</th></tr></thead>
-        <tbody>{months.map((m) => { const c = countRecs(recs.filter((r) => r.mk === m)); const b = workBase(c); const has = data.monthHasData[m]; return (
-          <tr key={m}><td className="font-semibold">{monthLabelOf(m)}</td>{has ? <><td className="num">{b}</td><td className="num">{b >= MIN_MONTH_SAMPLE ? fmtPct(presencaPct(c)) : <span title="amostra insuficiente">—</span>}</td><td className="num">{totalFaltas(c)}</td><td className="num">{b >= MIN_MONTH_SAMPLE ? fmtPct(pct1(totalFaltas(c), b)) : "—"}</td><td className="num">{c.sem}</td><td className="num">{c.cInt + c.cExt}</td></> : <td colSpan={6} className="text-center text-[var(--text-secondary)] text-xs">Sem dados na grelha</td>}</tr>
+        <thead><tr><th>Mês</th><th className="num">Postos</th><th className="num">Presença</th><th className="num">Faltas</th><th className="num">Backup int.</th><th className="num">Backup ext.</th><th className="num">Sem rep.</th></tr></thead>
+        <tbody>{months.map((m) => { const c = countRecs(recs.filter((r) => r.mk === m)); const b = postosOf(c); const has = data.monthHasData[m]; return (
+          <tr key={m}><td className="font-semibold">{monthLabelOf(m)}</td>{has ? <><td className="num">{b}</td><td className="num font-bold" style={{ color: presTone(c) }}>{fmtPct(presencaPct(c))}</td><td className="num">{totalAusencias(c)}</td><td className="num">{c.cInt}</td><td className="num">{c.cExt}</td><td className="num" style={c.sem ? { color: "#b91c1c", fontWeight: 700 } : {}}>{fmtNum(c.semW)}</td></> : <td colSpan={6} className="text-center text-[var(--text-secondary)] text-xs">Sem dados na grelha</td>}</tr>
         ); })}</tbody></table></div>
       <div className="section-label">Lojas e colaboradores ativos</div>
       <div className="space-y-2 mb-6">
         {cs.length === 0 && <div className="text-xs text-[var(--text-secondary)]">Sem lojas associadas.</div>}
         {cs.map((s) => { const emps = ops.employees.filter((e) => e.lojaId === s.id && empActiveOn(e, t)).sort((a, b) => a.nome.localeCompare(b.nome)); const sc = countRecs(recs.filter((r) => r.storeId === s.id && r.mk === mk)); return (
           <details key={s.id} className="det">
-            <summary><span className="w-2 h-2 rounded-full" style={{ background: s.cor }} /><span className="font-semibold">{s.nome}</span>{s.tipo === "backup_pool" && <span className="tag tag-blue">Pool</span>}<span className="ml-auto text-xs text-[var(--text-secondary)]">{emps.length} colab. · {totalFaltas(sc)} aus. · {sc.sem} s/bkp</span></summary>
+            <summary><span className="w-2 h-2 rounded-full" style={{ background: s.cor }} /><span className="font-semibold">{s.nome}</span>{s.tipo === "backup_pool" && <span className="tag tag-blue">Pool</span>}<span className="ml-auto text-xs text-[var(--text-secondary)]">{emps.length} colab. · {fmtPct(presencaPct(sc))} · {totalAusencias(sc)} faltas · {fmtNum(sc.semW)} s/rep.</span></summary>
             <div className="flex flex-wrap gap-1.5 pt-2">{emps.map((e) => <button key={e.id} onClick={() => ops.openEmployee(e.id)} className="fchip">{e.nome}</button>)}{!emps.length && <span className="text-xs text-[var(--text-secondary)]">Sem colaboradores ativos.</span>}</div>
           </details>
         ); })}
       </div>
-      {al.length > 0 && <><div className="section-label">Alertas ativos ({al.length})</div><div className="space-y-2 mb-6">{al.slice(0, 6).map((a) => <AlertMini key={a.key} a={a} unread={ops.isUnread(a)} onOpen={() => { onClose(); ops.nav("alerts", { focus: a.key }); }} />)}</div></>}
-      <div className="section-label">Ocorrências e backups · {monthLabelOf(mk)} ({occ.length})</div>
+      {al.length > 0 && <><div className="section-label">Alertas ({al.length})</div><div className="space-y-2 mb-6">{al.slice(0, 6).map((a) => <AlertMini key={a.key} a={a} unread={ops.isUnread(a)} onOpen={() => { onClose(); ops.nav("alerts", { focus: a.key }); }} />)}</div></>}
+      <div className="section-label">Faltas · {monthLabelOf(mk)} ({occ.length})</div>
       <OccurrenceTable items={occ} />
     </Drawer>
   );
@@ -3611,7 +3716,7 @@ function EmployeeDrawer({ empId, onClose }) {
   const months = useMemo(() => monthWindow(curMk, 6), [curMk]);
   const data = useOpsData({ months, stores: ops.stores, employees: ops.employees, clients: ops.clients, getScheduleForMonth: ops.getScheduleForMonth, enabled: ops.refsReady });
   const recs = useMemo(() => data.recs.filter((r) => r.empId === empId), [data.recs, empId]);
-  const abs = recs.filter((r) => ABS_TYPES.includes(r.st));
+  const abs = recs.filter(isAbsence);
   const c = countRecs(recs);
   const t = todayISO();
   const last30 = abs.filter((r) => r.date > shiftISO(t, -30) && r.date <= t).length;
@@ -3619,14 +3724,13 @@ function EmployeeDrawer({ empId, onClose }) {
   const prevWindowHasData = !!data.monthHasData[mkOfISO(shiftISO(t, -59))] || !!data.monthHasData[mkOfISO(shiftISO(t, -31))];
   const monthsWithAbs = months.filter((mk) => abs.some((r) => r.mk === mk));
   let consecMonths = 0, run = 0; months.forEach((mk) => { if (abs.some((r) => r.mk === mk)) { run++; consecMonths = Math.max(consecMonths, run); } else run = 0; });
-  const pattern = abs.length === 0 ? { l: "Sem ausências registadas", tone: "#16a34a", why: "Nenhuma Falta, Meia Falta ou Abandono nos meses analisados." }
-    : abs.length === 1 ? { l: "Ocorrência isolada", tone: "#64748b", why: "Uma única ausência no período — não constitui padrão." }
-    : last30 >= 3 || consecMonths >= 3 ? { l: "Padrão recorrente", tone: "#dc2626", why: last30 >= 3 ? `${last30} ausências nos últimos 30 dias (critério: ≥ 3).` : `Ausências em ${consecMonths} meses consecutivos (critério: ≥ 3).` }
-    : { l: "Ocorrências pontuais", tone: "#d97706", why: `${abs.length} ausências em ${monthsWithAbs.length} mês(es); abaixo dos critérios de recorrência (≥3 em 30 dias ou 3 meses seguidos).` };
+  const pattern = abs.length === 0 ? { l: "Sem faltas registadas", tone: "#16a34a", why: "Nenhuma falta (com ou sem backup) nos meses analisados." }
+    : abs.length === 1 ? { l: "Ocorrência isolada", tone: "#64748b", why: "Uma única falta no período — não constitui padrão." }
+    : last30 >= 3 || consecMonths >= 3 ? { l: "Padrão recorrente", tone: "#dc2626", why: last30 >= 3 ? `${last30} faltas nos últimos 30 dias (critério: ≥ 3).` : `Faltas em ${consecMonths} meses consecutivos (critério: ≥ 3).` }
+    : { l: "Ocorrências pontuais", tone: "#d97706", why: `${abs.length} faltas em ${monthsWithAbs.length} mês(es); abaixo dos critérios de recorrência (≥3 em 30 dias ou 3 meses seguidos).` };
   const chart = { labels: months.map(monthShort), datasets: [
-    { label: "Falta", data: months.map((mk) => (data.monthHasData[mk] ? abs.filter((r) => r.mk === mk && r.st === "Falta").length : null)), backgroundColor: "#ef4444" },
-    { label: "Meia Falta", data: months.map((mk) => (data.monthHasData[mk] ? abs.filter((r) => r.mk === mk && r.st === "Meia Falta").length : null)), backgroundColor: "#f59e0b" },
-    { label: "Abandono", data: months.map((mk) => (data.monthHasData[mk] ? abs.filter((r) => r.mk === mk && r.st === "Abandono").length : null)), backgroundColor: "#7f1d1d" },
+    { label: "Com backup", data: months.map((mk) => (data.monthHasData[mk] ? abs.filter((r) => r.mk === mk && r.cob !== "sem").length : null)), backgroundColor: "#0d9488" },
+    { label: "Sem reposição", data: months.map((mk) => (data.monthHasData[mk] ? abs.filter((r) => r.mk === mk && r.cob === "sem").length : null)), backgroundColor: "#ef4444" },
   ] };
   const timeline = recs.filter((r) => r.st !== "OK").sort((a, b) => b.date.localeCompare(a.date));
   if (!emp) return <Drawer title="Colaborador" onClose={onClose}><EmptyState title="Colaborador não encontrado" text="Pode ter sido eliminado." /></Drawer>;
@@ -3649,13 +3753,13 @@ function EmployeeDrawer({ empId, onClose }) {
             <div className="text-xs text-[var(--text-secondary)] mt-0.5">{pattern.why}</div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            <div className="mini"><span>Registos (6m)</span><b>{workBase(c)}</b><em>{c.ok} OK</em></div>
-            <div className="mini"><span>Ausências (6m)</span><b style={{ color: abs.length ? "#dc2626" : undefined }}>{abs.length}</b><em>{c.falta} falta · {c.meia} meia · {c.abandono} ab.</em></div>
+            <div className="mini"><span>Registos (6m)</span><b>{postosOf(c)}</b><em>{c.ok} OK</em></div>
+            <div className="mini"><span>Faltas (6m)</span><b style={{ color: abs.length ? "#dc2626" : undefined }}>{abs.length}</b><em>{totalRepostas(c)} com backup · {c.sem} sem</em></div>
             <div className="mini"><span>Últimos 30 dias</span><b>{last30}</b><em>{prevWindowHasData ? (last30 === prev30 ? "= 30 dias anteriores" : <span style={{ color: last30 > prev30 ? "#dc2626" : "#16a34a" }}>{last30 > prev30 ? "▲" : "▼"} vs {prev30} nos 30 anteriores</span>) : "sem base de comparação"}</em></div>
-            <div className="mini"><span>Sem backup</span><b style={{ color: c.sem ? "#dc2626" : undefined }}>{c.sem}</b><em>das ausências</em></div>
+            <div className="mini"><span>Sem reposição</span><b style={{ color: c.sem ? "#dc2626" : undefined }}>{c.sem}</b><em>das faltas</em></div>
           </div>
           <div className="grid md:grid-cols-2 gap-5 mb-5">
-            <div><div className="section-label">Ausências por mês</div><ChartCanvas type="bar" data={chart} options={barStackOpts} height={190} /></div>
+            <div><div className="section-label">Faltas por mês</div><ChartCanvas type="bar" data={chart} options={barStackOpts} height={190} /></div>
             <div><div className="section-label">Por dia da semana</div>
               <div className="grid grid-cols-7 gap-1.5 mt-3">{DIAS_SEMANA.map((d, i) => { const mx = Math.max(1, ...dow); return <div key={d} className="text-center"><div className="text-[10px] text-[var(--text-secondary)] font-semibold mb-1">{d}</div><div className="rounded-md h-12 flex items-center justify-center text-sm font-bold" style={{ background: dow[i] ? `rgba(239,68,68,${0.12 + 0.7 * dow[i] / mx})` : "var(--hover)", color: dow[i] / mx > 0.55 ? "#fff" : dow[i] ? "#991b1b" : "var(--text-secondary)" }}>{dow[i]}</div></div>; })}</div>
               <p className="text-[11px] text-[var(--text-secondary)] mt-2">Distribuição descritiva; com poucas ocorrências não indica padrão.</p>
@@ -3705,8 +3809,8 @@ function ReportsView({ params }) {
     if (r.date < range[0] || r.date > range[1]) return false;
     if (fClient && (r.clientId || "_none") !== fClient) return false;
     if (fStore && r.storeId !== fStore) return false;
-    if (fSt === "ocorrencias" && !(ABS_TYPES.includes(r.st) || ["Backup Interno", "Backup Externo", "Pool"].includes(r.st))) return false;
-    if (fSt === "ausencias" && !ABS_TYPES.includes(r.st)) return false;
+    if (fSt === "ocorrencias" && !(isAbsence(r) || r.st === "Pool")) return false;
+    if (fSt === "ausencias" && !isAbsence(r)) return false;
     if (fSt && !["ocorrencias", "ausencias"].includes(fSt) && r.st !== fSt) return false;
     if (fCob && r.cob !== fCob) return false;
     if (qn && !normTxt(`${r.emp} ${r.store} ${r.client}`).includes(qn)) return false;
@@ -3718,23 +3822,23 @@ function ReportsView({ params }) {
   const rowsPage = filtered.slice(page * PAGE, page * PAGE + PAGE);
   const th = (k, l) => <th onClick={() => setSort((s) => ({ k, dir: s.k === k ? -s.dir : -1 }))} className="cursor-pointer select-none whitespace-nowrap">{l}{sort.k === k ? (sort.dir === 1 ? " ↑" : " ↓") : ""}</th>;
   const clientName = (id) => (id === "_none" ? "Sem cliente" : (clients.find((x) => x.id === id) || {}).nome || "—");
-  const stLabel = { ocorrencias: "Ausências e backups", ausencias: "Só ausências", "": "Todos os estados" };
+  const stLabel = { ocorrencias: "Faltas e backups", ausencias: "Só faltas", "": "Todos os estados" };
   const doExport = async () => {
     setExporting(true);
     try {
       const byCli = groupByClientStore(filtered);
-      const byEmp = [...groupCount(filtered, (r) => r.empId).values()].map((e) => { const cc = countRecs(e.recs); return { Colaborador: e.recs[0].emp, Cliente: e.recs[0].client, Loja: e.recs[0].store, OK: cc.ok, Falta: cc.falta, "Meia Falta": cc.meia, Abandono: cc.abandono, "Ausências (total)": totalFaltas(cc), "Sem backup": cc.sem, Baixa: cc.baixa, Formação: cc.formacao, Folga: cc.folga }; }).sort((a, b) => b["Ausências (total)"] - a["Ausências (total)"]);
-      const byDay = [...groupCount(filtered, (r) => r.date).values()].sort((a, b) => a.k.localeCompare(b.k)).map((e) => { const cc = countRecs(e.recs); return { Data: fmtDMY(e.k), OK: cc.ok, Ausências: totalFaltas(cc), "Sem backup": cc.sem, "Backup interno": cc.cInt, "Backup externo": cc.cExt, "Presença %": workBase(cc) >= MIN_DAY_SAMPLE ? presencaPct(cc) : "" }; });
+      const byEmp = [...groupCount(filtered, (r) => r.empId).values()].map((e) => { const cc = countRecs(e.recs); return { Colaborador: e.recs[0].emp, Cliente: e.recs[0].client, Loja: e.recs[0].store, OK: cc.ok, "Faltas (total)": totalAusencias(cc), "Com backup interno": cc.cInt, "Com backup externo": cc.cExt, "Sem reposição": cc.semW, Baixa: cc.baixa, Formação: cc.formacao, Folga: cc.folga }; }).sort((a, b) => b["Faltas (total)"] - a["Faltas (total)"]);
+      const byDay = [...groupCount(filtered, (r) => r.date).values()].sort((a, b) => a.k.localeCompare(b.k)).map((e) => { const cc = countRecs(e.recs); return { Data: fmtDMY(e.k), Postos: postosOf(cc), OK: cc.ok, Faltas: totalAusencias(cc), "Backup interno": cc.cInt, "Backup externo": cc.cExt, "Sem reposição": cc.semW, "Presença %": presencaPct(cc) ?? "" }; });
       await exportXlsx(`relatorio-presencas-${range[0]}_${range[1]}.xlsx`, [
         { name: "Critérios", rows: [
           { Campo: "Aplicação", Valor: APP_NAME }, { Campo: "Gerado em", Valor: new Date().toLocaleString("pt-PT") }, { Campo: "Gerado por", Valor: (ops.user && ops.user.displayName) || "" },
           { Campo: "Período", Valor: `${fmtDMY(range[0])} a ${fmtDMY(range[1])}` }, { Campo: "Cliente", Valor: fClient ? clientName(fClient) : "Todos" },
           { Campo: "Loja", Valor: fStore ? (stores.find((s) => s.id === fStore) || {}).nome : "Todas" }, { Campo: "Estados", Valor: stLabel[fSt] !== undefined ? stLabel[fSt] : fSt },
           { Campo: "Cobertura", Valor: fCob ? COB_LABEL[fCob] : "Todas" }, { Campo: "Pesquisa", Valor: q || "—" }, { Campo: "Nº registos", Valor: filtered.length },
-          { Campo: "Notas", Valor: "Fonte: grelha (schedule). Folgas fixas automáticas não são gravadas e não constam. Cobertura segundo a regra de emparelhamento da aplicação." },
+          { Campo: "Notas", Valor: "Presença = (postos − faltas sem reposição) ÷ postos. Faltas com backup interno/externo não baixam a presença; Meia Falta sem reposição pesa 0,5. Reposição pela loja pool contada no mesmo dia e loja." },
         ] },
         { name: "Registos", rows: filtered.map(recToRow) },
-        { name: "Resumo por cliente", rows: byCli.flatMap((g) => [{ Cliente: g.nome, Loja: "(total)", OK: g.tot.ok, Falta: g.tot.falta, "Meia Falta": g.tot.meia, Abandono: g.tot.abandono, "Ausências": totalFaltas(g.tot), "C/ bkp interno": g.tot.cInt, "C/ bkp externo": g.tot.cExt, "Sem backup": g.tot.sem, Baixa: g.tot.baixa }, ...g.stores.map((s) => ({ Cliente: g.nome, Loja: s.nome, OK: s.tot.ok, Falta: s.tot.falta, "Meia Falta": s.tot.meia, Abandono: s.tot.abandono, "Ausências": totalFaltas(s.tot), "C/ bkp interno": s.tot.cInt, "C/ bkp externo": s.tot.cExt, "Sem backup": s.tot.sem, Baixa: s.tot.baixa }))]) },
+        { name: "Resumo por cliente", rows: byCli.flatMap((g) => [{ Cliente: g.nome, Loja: "(total)", "Presença %": presencaPct(g.tot) ?? "", Postos: postosOf(g.tot), OK: g.tot.ok, Faltas: totalAusencias(g.tot), "Backup interno": g.tot.cInt, "Backup externo": g.tot.cExt, "Sem reposição": g.tot.semW }, ...g.stores.map((s) => ({ Cliente: g.nome, Loja: s.nome, "Presença %": presencaPct(s.tot) ?? "", Postos: postosOf(s.tot), OK: s.tot.ok, Faltas: totalAusencias(s.tot), "Backup interno": s.tot.cInt, "Backup externo": s.tot.cExt, "Sem reposição": s.tot.semW }))]) },
         { name: "Resumo por colaborador", rows: byEmp },
         { name: "Resumo diário", rows: byDay },
       ]);
@@ -3744,7 +3848,7 @@ function ReportsView({ params }) {
   };
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Sistema" title="Histórico e Relatórios" subtitle="Consulta de registos de qualquer período, exportação Excel e auditoria de alterações." />
+      <PageHeader eyebrow="Sistema" title="Histórico e Exportação" subtitle="Consulta de registos de qualquer período, exportação Excel e auditoria de alterações." />
       <div className="mb-4"><Seg value={tab} onChange={setTab} options={[["registos", "Registos de presença"], ["auditoria", "Auditoria de alterações"]]} /></div>
       {tab === "auditoria" ? <HistoryView embedded /> : (
         <>
@@ -3753,8 +3857,8 @@ function ReportsView({ params }) {
             <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)]">a <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} className="input w-auto" /></label>
             <select value={fClient} onChange={(e) => { setFClient(e.target.value); setFStore(""); }} className="input w-auto"><option value="">Todos os clientes</option>{clients.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select>
             <select value={fStore} onChange={(e) => setFStore(e.target.value)} className="input w-auto"><option value="">Todas as lojas</option>{stores.filter((s) => !fClient || s.clienteId === fClient).sort((a, b) => a.nome.localeCompare(b.nome)).map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}</select>
-            <select value={fSt} onChange={(e) => setFSt(e.target.value)} className="input w-auto"><option value="ocorrencias">Ausências e backups</option><option value="ausencias">Só ausências</option><option value="">Todos os estados</option>{STATUS_OPTIONS.filter((s) => s.value).map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}<option value="Pool">Backup Interno (loja pool)</option></select>
-            <select value={fCob} onChange={(e) => setFCob(e.target.value)} className="input w-auto"><option value="">Toda a cobertura</option><option value="sem">Sem backup</option><option value="int">Backup interno</option><option value="ext">Backup externo</option></select>
+            <select value={fSt} onChange={(e) => setFSt(e.target.value)} className="input w-auto"><option value="ocorrencias">Faltas e backups</option><option value="ausencias">Só faltas</option><option value="">Todos os estados</option>{STATUS_OPTIONS.filter((s) => s.value).map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}<option value="Pool">Backup Interno (loja pool)</option></select>
+            <select value={fCob} onChange={(e) => setFCob(e.target.value)} className="input w-auto"><option value="">Toda a cobertura</option><option value="sem">Sem reposição</option><option value="int">Backup interno</option><option value="ext">Backup externo</option></select>
             <div className="relative flex-1 min-w-[180px]"><Icon path={ICONS.search} size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Colaborador, loja, cliente…" className="input pl-9" /></div>
             <button onClick={doExport} disabled={exporting || data.status !== "ready"} className="btn btn-primary"><Icon path={exporting ? ICONS.refresh : ICONS.download} size={15} className={exporting ? "spin" : ""} />Exportar Excel</button>
           </div>
@@ -3770,9 +3874,9 @@ function ReportsView({ params }) {
             <>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                 <div className="mini card p-3"><span>Registos</span><b>{filtered.length}</b><em>{fmtDMY(range[0])} – {fmtDMY(range[1])}</em></div>
-                <div className="mini card p-3"><span>Ausências</span><b style={{ color: "#dc2626" }}>{totalFaltas(c)}</b><em>{c.falta} f · {c.meia} m · {c.abandono} a</em></div>
-                <div className="mini card p-3"><span>Sem backup</span><b>{c.sem}</b><em>das ausências</em></div>
-                <div className="mini card p-3"><span>Backups</span><b>{c.cInt + c.cExt}</b><em>{c.cInt} int · {c.cExt} ext</em></div>
+                <div className="mini card p-3"><span>Presença</span><b style={{ color: presTone(c) }}>{fmtPct(presencaPct(c))}</b><em>{postosOf(c)} postos</em></div>
+                <div className="mini card p-3"><span>Faltas</span><b>{totalAusencias(c)}</b><em>{totalRepostas(c)} com backup · {fmtNum(c.semW)} sem</em></div>
+                <div className="mini card p-3"><span>Backups</span><b>{totalRepostas(c)}</b><em>{c.cInt} int · {c.cExt} ext</em></div>
                 <div className="mini card p-3"><span>Meses sem dados</span><b>{months.filter((m) => !data.monthHasData[m]).length}</b><em>{months.filter((m) => !data.monthHasData[m]).map(monthShort).join(", ") || "nenhum"}</em></div>
               </div>
               <div className="card overflow-hidden">
@@ -3811,17 +3915,17 @@ function ReportsView({ params }) {
 /* CONFIGURAÇÕES                                                           */
 /* ====================================================================== */
 const STATUS_DEFS = {
-  "OK": "Presença confirmada. Entra no numerador e no denominador da taxa de presença.",
-  "Falta": "Ausência completa. Conta como ausência; emparelha com backups para cobertura.",
-  "Meia Falta": "Ausência parcial. Conta como 1 ocorrência de ausência (não é convertida em falta completa).",
-  "Formação": "Colaborador em formação. Não é ausência; fora do denominador de presença.",
-  "Backup Interno": "Na coluna do colaborador: ausência coberta por backup interno. Conta como “falta com backup interno”.",
-  "Backup Externo": "Na coluna do colaborador: ausência coberta por backup externo. Conta como “falta com backup externo”.",
-  "Folga": "Folga (gravada ou fixa automática). Não é ausência; fora do denominador.",
-  "Baixa": "Baixa médica/outra. Não é ausência injustificada; contada à parte.",
-  "Abandono": "Ausência por abandono. Conta como ausência, bloqueia o resto do mês e desativa o colaborador com data de saída.",
-  "Desligado": "Saída do colaborador. Bloqueia o resto do mês e desativa-o. Não conta como ausência.",
-  "Bloqueado": "“Sem preenchimento”: dia não aplicável. Fora do universo esperado e de todas as taxas.",
+  "OK": "Presente. Posto assegurado.",
+  "Falta": "Faltou e ninguém foi colocado no lugar → baixa a presença (salvo reposição pela loja pool no mesmo dia).",
+  "Meia Falta": "Faltou parte do dia sem reposição → baixa a presença em meio posto.",
+  "Formação": "Em formação. Não é posto previsto nem falta.",
+  "Backup Interno": "Faltou, mas foi reposto com backup interno → conta como posto assegurado (não baixa a presença).",
+  "Backup Externo": "Faltou, mas foi reposto com backup externo → conta como posto assegurado (não baixa a presença).",
+  "Folga": "Folga (gravada ou fixa automática). Não é posto previsto.",
+  "Baixa": "Baixa. Não é posto previsto nem falta.",
+  "Abandono": "Abandonou o posto sem reposição → baixa a presença; bloqueia o resto do mês e desativa o colaborador.",
+  "Desligado": "Saída do colaborador. Bloqueia o resto do mês e desativa-o. Não é falta.",
+  "Bloqueado": "“Sem preenchimento”: dia não aplicável. Não conta para nada.",
 };
 
 function SettingsView() {
@@ -3847,19 +3951,19 @@ function SettingsView() {
   };
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Sistema" title="Configurações" subtitle="Critérios de alerta, preferências, referência de estados e cópias de segurança." />
+      <PageHeader eyebrow="Sistema" title="Configurações" subtitle="Limites dos alertas, preferências, regra de presença e cópias de segurança." />
       <div className="grid xl:grid-cols-2 gap-5">
-        <Card title="Critérios dos alertas de padrão" right={<div className="flex gap-2"><button onClick={() => setLocal({ ...ALERT_CFG_DEFAULT })} className="text-xs font-semibold text-[var(--accent)]">Repor por defeito</button></div>}>
-          <p className="text-xs text-[var(--text-secondary)] mb-4">Usados pela Central de Alertas. Guardados neste navegador (mesma chave da versão anterior).</p>
-          <div className="grid sm:grid-cols-2 gap-x-5 gap-y-3">
-            {Object.keys(ALERT_CFG_DEFAULT).map((k) => (
-              <label key={k} className="flex items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
-                <span>{ALERT_CFG_LABELS[k]}</span>
-                <input type="number" min="0" step={k === "semMult" ? "0.1" : "1"} value={cfg[k]} onChange={(e) => { const n = Number(e.target.value); setLocal({ ...cfg, [k]: Number.isFinite(n) ? n : ALERT_CFG_DEFAULT[k] }); }} className="input input-sm w-20 text-right" />
+        <Card title="Limites dos alertas" right={<button onClick={() => setLocal({ ...cfg, motSem: ALERT_CFG_DEFAULT.motSem, motMes: ALERT_CFG_DEFAULT.motMes, semBkpSem: ALERT_CFG_DEFAULT.semBkpSem })} className="text-xs font-semibold text-[var(--accent)]">Repor por defeito</button>}>
+          <p className="text-xs text-[var(--text-secondary)] mb-4">Só existem dois tipos de alerta: clientes com faltas sem reposição (últimos 7 dias) e motoristas reincidentes. Guardado neste navegador.</p>
+          <div className="space-y-3">
+            {ALERT_FIELDS.map(([k, label]) => (
+              <label key={k} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-[var(--text-secondary)]">{label}</span>
+                <input type="number" min="1" step="1" value={cfg[k]} onChange={(e) => { const n = Number(e.target.value); setLocal({ ...cfg, [k]: Number.isFinite(n) && n > 0 ? n : ALERT_CFG_DEFAULT[k] }); }} className="input input-sm w-20 text-right" />
               </label>
             ))}
           </div>
-          <div className="flex justify-end mt-4"><button disabled={!changed} onClick={() => { ops.setCfg(cfg); ops.toast("success", "Critérios guardados."); }} className="btn btn-primary">Guardar critérios</button></div>
+          <div className="flex justify-end mt-4"><button disabled={!changed} onClick={() => { ops.setCfg(cfg); ops.toast("success", "Limites guardados."); }} className="btn btn-primary">Guardar</button></div>
         </Card>
         <div className="space-y-5">
           <Card title="Preferências">
@@ -3877,10 +3981,10 @@ function SettingsView() {
           </Card>
         </div>
         <Card title="Estados de presença — referência" className="xl:col-span-2">
-          <p className="text-xs text-[var(--text-secondary)] mb-3">Os estados são fixos porque cada célula histórica guarda o próprio texto do estado; renomear um estado alteraria o significado do histórico. Novos estados podem ser acrescentados no código (lista STATUS_OPTIONS) sem migração.</p>
+          <p className="text-xs text-[var(--text-secondary)] mb-3"><b className="text-[var(--text-primary)]">Presença = (postos previstos − faltas sem reposição) ÷ postos previstos.</b> Postos previstos = OK + Falta + Meia Falta + Abandono + Backup Interno + Backup Externo. Só as faltas sem ninguém no lugar baixam a percentagem.</p>
           <div className="overflow-x-auto"><table className="tbl min-w-[640px]"><thead><tr><th>Estado</th><th>Significado e contagem</th></tr></thead>
             <tbody>{STATUS_OPTIONS.filter((s) => s.value).map((s) => <tr key={s.value}><td className="whitespace-nowrap"><StatusChip val={s.value} /></td><td className="text-xs">{STATUS_DEFS[s.value] || ""}</td></tr>)}
-              <tr><td className="whitespace-nowrap"><StatusChip val="__pool__" storeName="loja X" /></td><td className="text-xs">Colaborador da loja pool atribuído a outra loja do mesmo cliente. Conta como backup interno na loja coberta.</td></tr>
+              <tr><td className="whitespace-nowrap"><StatusChip val="__pool__" storeName="loja X" /></td><td className="text-xs">Colaborador da loja pool enviado para outra loja do mesmo cliente. Repõe, no mesmo dia, uma falta dessa loja (backup interno).</td></tr>
               <tr><td><StatusChip val="" /></td><td className="text-xs">Célula vazia: não verificado. Nunca é tratado como ausência.</td></tr>
             </tbody></table></div>
         </Card>
@@ -4938,7 +5042,7 @@ function App() {
   const [user, setUser] = useState(() => {
     try { const raw = localStorage.getItem("opsUser"); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   });
-  const [view, setView] = useState(() => { try { const v = localStorage.getItem("opsView"); return VIEW_IDS.includes(v) ? v : "command"; } catch (e) { return "command"; } });
+  const [view, setView] = useState(() => { try { const v = localStorage.getItem("opsView"); return VIEW_IDS.includes(v) ? v : "report"; } catch (e) { return "report"; } });
   const [viewParams, setViewParams] = useState(null);
   const [collapsed, setCollapsedState] = useState(() => { try { return localStorage.getItem("opsCollapsed") === "1"; } catch (e) { return false; } });
   const [mobileNav, setMobileNav] = useState(false);
@@ -5142,10 +5246,10 @@ function App() {
 
   // ---------------- Motor de alertas (mês atual + 3 anteriores) ----------------
   const todayIso = todayISO();
-  const engineMonths = useMemo(() => monthWindow(mkOfISO(todayIso), 4), [todayIso]);
+  const engineMonths = useMemo(() => monthWindow(mkOfISO(todayIso), 2), [todayIso]);
   const engine = useOpsData({ months: engineMonths, stores, employees, clients, getScheduleForMonth, enabled: !!user && refsReady, version, peek: peekSchedule });
   const alerts = useMemo(() => (engine.status === "ready"
-    ? buildAllAlerts({ data: engine, employees, stores, clients, cfg, months: engineMonths, todayIso, hour: new Date().getHours() }) : []),
+    ? buildAllAlerts({ data: engine, employees, clients, cfg, todayIso }) : []),
     // eslint-disable-next-line
     [engine.status, engine.recs, engine.schedules, engine.monthHasData, employees, stores, clients, cfg, engineMonths, todayIso, clock]);
   const isUnread = useCallback((a) => { const r = (alertState.reads || {})[a.key]; return !r || r.sig !== a.sig; }, [alertState]);
@@ -5207,7 +5311,8 @@ function App() {
               {view === "daily" && <DailyRegisterView params={viewParams} />}
               {view === "grid" && <GridView {...common} saveCellStatus={saveCellStatus} saveCellsBatch={saveCellsBatch} getArrivalsForMonth={getArrivalsForMonth} saveArrivalTime={saveArrivalTime} />}
               {view === "alerts" && <AlertCenterView params={viewParams} />}
-              {view === "analyses" && <AnalyticsHub params={viewParams} />}
+              {view === "analyses" && <AnalysisView params={viewParams} />}
+              {view === "report" && <DayReportView params={viewParams} />}
               {view === "clients" && <ClientsHubView params={viewParams} />}
               {view === "stores" && <StoresView stores={stores} employees={employees} clients={clients} hideTabs />}
               {view === "employees" && <EmployeesView />}
