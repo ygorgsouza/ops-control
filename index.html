@@ -399,6 +399,9 @@
   :root{--pf-1:#166534;--pf-2:#3f6212;--pf-3:#92400e;--pf-4:#991b1b;}
   html.dark{--pf-1:#4ade80;--pf-2:#a3e635;--pf-3:#fbbf24;--pf-4:#f87171;}
   html.dark .heat td button{color:#1f2937 !important;}
+  .btn-resolve{background:#16a34a;color:#fff;} .btn-resolve:hover{background:#15803d;}
+  .resolved-note{display:flex;align-items:center;gap:6px;margin-top:10px;padding:8px 10px;border-radius:9px;background:#f0fdf4;color:#166534;font-size:12px;font-weight:600;}
+  html.dark .resolved-note{background:#0f2b1d;color:#4ade80;}
 </style>
 </head>
 <body>
@@ -2255,7 +2258,8 @@ function buildAllAlerts({ data, employees, clients, cfg, todayIso }) {
   });
 
   // 2) Motoristas reincidentes (todas as faltas, com ou sem reposição)
-  const abs30 = recs.filter((r) => isAbsence(r) && r.date >= from30 && empById.has(r.empId));
+  // Quem já saiu da empresa (Desligado) deixa de gerar alerta de reincidência.
+  const abs30 = recs.filter((r) => isAbsence(r) && r.date >= from30 && empById.has(r.empId) && empById.get(r.empId).estado !== "Desligado");
   groupCount(abs30, (r) => r.empId).forEach((e) => {
     const n7 = e.recs.filter((r) => r.date >= from7).length;
     const hit30 = e.n >= cfg.motMes, hit7 = n7 >= cfg.motSem;
@@ -2318,7 +2322,10 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
 const OpsCtx = React.createContext(null);
 const useOps = () => React.useContext(OpsCtx);
 const ALERT_DOC = () => col("schedule").doc("_alertas");
-const readLocalAlerts = () => { try { const d = JSON.parse(localStorage.getItem("opsAlertState") || "{}"); return { reads: d.reads || {}, follow: d.follow || {}, seen: d.seen || {} }; } catch (e) { return { reads: {}, follow: {}, seen: {} }; } };
+const readLocalAlerts = () => { try { const d = JSON.parse(localStorage.getItem("opsAlertState") || "{}"); return { reads: d.reads || {}, follow: d.follow || {}, seen: d.seen || {}, resolved: d.resolved || {} }; } catch (e) { return { reads: {}, follow: {}, seen: {}, resolved: {} }; } };
+const lastRecDate = (a) => (a.recs || []).reduce((m, r) => (r.date > m ? r.date : m), "");
+// Resolvido = alguém marcou como resolvido e não houve faltas novas depois disso.
+const isResolvedBy = (a, resolved) => { const r = (resolved || {})[a.key]; return !!r && !r.reopened && lastRecDate(a) <= (r.lastRecDate || ""); };
 // Mensagens de erro em português claro (nunca mostrar "Missing or insufficient permissions").
 function friendlyErr(e, what) {
   const code = (e && e.code) || "", msg = String((e && e.message) || e || "");
@@ -3659,7 +3666,7 @@ function AlertMini({ a, unread, onOpen }) {
   );
 }
 
-function AlertCard({ a, open, onToggle, unread, reappeared, follow, readBy, onRead, onFollow }) {
+function AlertCard({ a, open, onToggle, unread, reappeared, follow, readBy, onRead, onFollow, onResolve, resolvedInfo, onReopen }) {
   const ops = useOps();
   return (
     <div id={`alert-${a.key}`} className={`alert-card ${unread ? "unread" : ""}`} style={{ borderLeftColor: PRIO[a.sev].color }}>
@@ -3676,9 +3683,17 @@ function AlertCard({ a, open, onToggle, unread, reappeared, follow, readBy, onRe
       <div className="flex items-center gap-1.5 flex-wrap mt-3">
         <button onClick={onToggle} className="btn btn-ghost btn-xs"><Icon path={ICONS.eye} size={13} />{open ? "Ocultar faltas" : `Ver faltas (${a.recs.length})`}</button>
         {a.nav && <button onClick={() => (a.nav.view === "employee" ? ops.openEmployee(a.nav.params.empId) : ops.nav(a.nav.view, a.nav.params))} className="btn btn-ghost btn-xs"><Icon path={ICONS.arrowRight} size={13} />{a.nav.label}</button>}
-        {unread ? <button onClick={onRead} className="btn btn-ghost btn-xs"><Icon path={ICONS.check} size={13} />Marcar como lido</button> : <span className="text-[11px] text-[var(--text-secondary)] px-1">Lido{readBy ? ` por ${readBy}` : ""}</span>}
-        <button onClick={onFollow} className="btn btn-ghost btn-xs"><Icon path={ICONS.flag} size={13} />{follow ? "Retirar acompanhamento" : "Acompanhar"}</button>
+        {resolvedInfo ? (
+          <button onClick={onReopen} className="btn btn-ghost btn-xs"><Icon path={ICONS.refresh} size={13} />Reabrir</button>
+        ) : (
+          <>
+            {unread ? <button onClick={onRead} className="btn btn-ghost btn-xs"><Icon path={ICONS.eye} size={13} />Marcar como lido</button> : <span className="text-[11px] text-[var(--text-secondary)] px-1">Lido{readBy ? ` por ${readBy}` : ""}</span>}
+            <button onClick={onFollow} className="btn btn-ghost btn-xs"><Icon path={ICONS.flag} size={13} />{follow ? "Retirar acompanhamento" : "Acompanhar"}</button>
+            <button onClick={onResolve} className="btn btn-resolve btn-xs ml-auto"><Icon path={ICONS.check} size={13} />Resolver</button>
+          </>
+        )}
       </div>
+      {resolvedInfo && <div className="resolved-note"><Icon path={ICONS.check} size={13} />Resolvido por {resolvedInfo.user || "—"} em {fmtDateTime(resolvedInfo.at)}{resolvedInfo.note ? ` — “${resolvedInfo.note}”` : ""}</div>}
       {open && <div className="mt-3"><OccurrenceTable items={a.recs} maxH={280} /></div>}
     </div>
   );
@@ -3691,13 +3706,15 @@ function AlertCenterView({ params }) {
   const [fState, setFState] = useState("");
   const [fClient, setFClient] = useState("");
   const [open, setOpen] = useState({});
+  const [resolving, setResolving] = useState(null);
+  const [note, setNote] = useState("");
   const focus = params && params.focus;
   useEffect(() => {
     if (!focus) return;
     setOpen((o) => ({ ...o, [focus]: true }));
     setTimeout(() => { const el = document.getElementById(`alert-${focus}`); if (el) el.scrollIntoView({ behavior: "smooth", block: "center" }); }, 120);
   }, [focus]);
-  const reads = ops.alertState.reads || {}, follows = ops.alertState.follow || {}, seen = ops.alertState.seen || {};
+  const reads = ops.alertState.reads || {}, follows = ops.alertState.follow || {}, seen = ops.alertState.seen || {}, resolvedMap = ops.alertState.resolved || {};
   const list = ops.alerts.filter((a) => {
     if (fKind && a.kind !== fKind) return false;
     if (fClient && !(a.clientIds || []).includes(fClient)) return false;
@@ -3710,7 +3727,8 @@ function AlertCenterView({ params }) {
   const nEmp = ops.alerts.length - nCli;
   const unreadN = ops.alerts.filter((a) => ops.isUnread(a)).length;
   const activeKeys = new Set(ops.alerts.map((a) => a.key));
-  const past = Object.entries(seen).filter(([k]) => !activeKeys.has(k) && /^(cliSem|emp)\|/.test(k)).map(([k, v]) => ({ key: k, ...v })).sort((a, b) => (b.last || 0) - (a.last || 0));
+  const resolvedKeys = new Set(ops.resolvedAlerts.map((a) => a.key));
+  const past = Object.entries(seen).filter(([k]) => !activeKeys.has(k) && !resolvedKeys.has(k) && /^(cliSem|emp)\|/.test(k)).map(([k, v]) => ({ key: k, ...v })).sort((a, b) => (b.last || 0) - (a.last || 0));
   return (
     <div className="page fade-in">
       <PageHeader eyebrow="Direção" title="Alertas" subtitle="Clientes com faltas sem reposição (7 dias) e motoristas que faltam com recorrência (30 dias)."
@@ -3721,7 +3739,7 @@ function AlertCenterView({ params }) {
         <button onClick={() => setFState(fState === "novos" ? "" : "novos")} className={`kpi kpi-click text-left ${fState === "novos" ? "ring-2 ring-[var(--accent)]" : ""}`}><span className="kpi-label">Não lidos</span><div className="kpi-value" style={{ color: "var(--accent)" }}>{unreadN}</div></button>
       </div>
       <div className="toolbar mb-4">
-        <Seg value={tab} onChange={setTab} options={[["ativos", "Ativos", ops.alerts.length], ["historico", "Anteriores", past.length]]} />
+        <Seg value={tab} onChange={setTab} options={[["ativos", "Ativos", ops.alerts.length], ["resolvidos", "Resolvidos", ops.resolvedAlerts.length], ["historico", "Anteriores", past.length]]} />
         {tab === "ativos" && <>
           <select value={fState} onChange={(e) => setFState(e.target.value)} className="input w-auto"><option value="">Todos</option><option value="novos">Só novos</option><option value="acomp">Em acompanhamento</option></select>
           <select value={fClient} onChange={(e) => setFClient(e.target.value)} className="input w-auto"><option value="">Todos os clientes</option>{ops.clients.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
@@ -3733,9 +3751,16 @@ function AlertCenterView({ params }) {
         <div className="space-y-3">{list.map((a) => {
           const rd = reads[a.key];
           return <AlertCard key={a.key} a={a} open={!!open[a.key]} onToggle={() => setOpen((o) => ({ ...o, [a.key]: !o[a.key] }))} unread={ops.isUnread(a)} reappeared={!!rd && rd.sig !== a.sig}
-            readBy={rd && rd.sig === a.sig ? rd.user : ""} follow={!!(follows[a.key] && follows[a.key].on)} onRead={() => ops.markRead([a])} onFollow={() => ops.toggleFollow(a.key)} />;
+            readBy={rd && rd.sig === a.sig ? rd.user : ""} follow={!!(follows[a.key] && follows[a.key].on)} onRead={() => ops.markRead([a])} onFollow={() => ops.toggleFollow(a.key)}
+            onResolve={() => { setNote(""); setResolving(a); }} />;
         })}</div>
-      )) : (
+      )) : tab === "resolvidos" ? (
+        ops.resolvedAlerts.length === 0 ? <div className="card"><EmptyState icon={ICONS.check} title="Sem alertas resolvidos" text="Quando resolveres um alerta, fica aqui até haver faltas novas que o justifiquem." /></div> : (
+          <div className="space-y-3">{ops.resolvedAlerts.map((a) => (
+            <AlertCard key={a.key} a={a} open={!!open[a.key]} onToggle={() => setOpen((o) => ({ ...o, [a.key]: !o[a.key] }))} resolvedInfo={resolvedMap[a.key]} onReopen={() => ops.reopenAlert(a.key)} />
+          ))}</div>
+        )
+      ) : (
         <div className="card overflow-hidden">
           {past.length === 0 ? <EmptyState title="Sem alertas anteriores" /> : (
             <div className="overflow-x-auto"><table className="tbl min-w-[640px]">
@@ -3745,7 +3770,21 @@ function AlertCenterView({ params }) {
           )}
         </div>
       )}
-      <p className="text-[11px] text-[var(--text-secondary)] mt-4">Limites editáveis em Configurações. “Marcar como lido” só retira o indicador de novo; se surgirem novas faltas o alerta volta a aparecer como novo.</p>
+      <p className="text-[11px] text-[var(--text-secondary)] mt-4">“Resolver” retira o alerta da lista; só volta se houver faltas novas depois da resolução. Motoristas desligados deixam de gerar alertas automaticamente. Limites editáveis em Configurações.</p>
+      {resolving && (
+        <Modal title="Resolver alerta" onClose={() => setResolving(null)} width="max-w-md">
+          <div className="text-sm font-bold mb-1">{resolving.title}</div>
+          <div className="text-xs text-[var(--text-secondary)] mb-3">{resolving.entity}</div>
+          <Field label="Como foi resolvido? (opcional)">
+            <textarea autoFocus rows={3} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} placeholder="Ex.: motorista substituído; falámos com o supervisor; cliente informado" />
+          </Field>
+          <div className="flex flex-wrap gap-1.5 mb-4">{["Motorista substituído", "Motorista desligado", "Situação regularizada", "Cliente informado"].map((t) => <button key={t} type="button" onClick={() => setNote(t)} className="fchip">{t}</button>)}</div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setResolving(null)} className="btn btn-ghost">Cancelar</button>
+            <button onClick={() => { ops.resolveAlert(resolving, note.trim()); setResolving(null); }} className="btn btn-primary"><Icon path={ICONS.check} size={15} />Resolver</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -5622,7 +5661,7 @@ function App() {
   const refsReady = refsLoaded.s && refsLoaded.e && refsLoaded.c;
   const [dark, setDark] = useState(() => { try { return localStorage.getItem("opsTheme") === "dark"; } catch (e) { return false; } });
   const [cfg, setCfgState] = useState(() => { try { const raw = localStorage.getItem("opsAlertCfg"); return raw ? { ...ALERT_CFG_DEFAULT, ...JSON.parse(raw) } : { ...ALERT_CFG_DEFAULT }; } catch (e) { return { ...ALERT_CFG_DEFAULT }; } });
-  const [alertState, setAlertState] = useState({ reads: {}, follow: {}, seen: {}, loaded: false });
+  const [alertState, setAlertState] = useState({ reads: {}, follow: {}, seen: {}, resolved: {}, loaded: false });
   const [version, setVersion] = useState(0);
   const [sync, setSync] = useState({ online: typeof navigator === "undefined" ? true : navigator.onLine, pending: 0, error: "" });
   const [clock, setClock] = useState(0);
@@ -5692,7 +5731,7 @@ function App() {
     const unsub4 = ALERT_DOC().onSnapshot((snap) => {
       if (alertLocal.current) return;
       const d = snap.exists ? snap.data() : {};
-      setAlertState({ reads: d.reads || {}, follow: d.follow || {}, seen: d.seen || {}, loaded: true });
+      setAlertState({ reads: d.reads || {}, follow: d.follow || {}, seen: d.seen || {}, resolved: d.resolved || {}, loaded: true });
     }, () => { alertLocal.current = true; setAlertState({ ...readLocalAlerts(), loaded: true }); });
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, [user]);
@@ -5898,7 +5937,7 @@ function App() {
   const todayIso = todayISO();
   const engineMonths = useMemo(() => monthWindow(mkOfISO(todayIso), 2), [todayIso]);
   const engine = useOpsData({ months: engineMonths, stores, employees, clients, getScheduleForMonth, enabled: !!user && refsReady, version, peek: peekSchedule });
-  const alerts = useMemo(() => (engine.status === "ready"
+  const alertsAll = useMemo(() => (engine.status === "ready"
     ? buildAllAlerts({ data: engine, employees, clients, cfg, todayIso }) : []),
     // eslint-disable-next-line
     [engine.status, engine.recs, engine.schedules, engine.monthHasData, employees, stores, clients, cfg, engineMonths, todayIso, clock]);
@@ -5914,6 +5953,13 @@ function App() {
     Object.keys(patch).forEach((grp) => { fs[grp] = {}; Object.keys(patch[grp]).forEach((k) => { const v = patch[grp][k]; fs[grp][k] = v && v._del ? firebase.firestore.FieldValue.delete() : v; }); });
     ALERT_DOC().set(fs, { merge: true }).catch(() => { alertLocal.current = true; applyLocal(); });
   }, []);
+  const alerts = useMemo(() => alertsAll.filter((a) => !isResolvedBy(a, alertState.resolved)), [alertsAll, alertState.resolved]);
+  const resolvedAlerts = useMemo(() => alertsAll.filter((a) => isResolvedBy(a, alertState.resolved)), [alertsAll, alertState.resolved]);
+  const resolveAlert = useCallback((a, note) => {
+    alertWrite({ resolved: { [a.key]: { at: Date.now(), user: (user && user.displayName) || "", note: note || "", lastRecDate: lastRecDate(a), title: a.title, kind: a.kind } } });
+    toast("success", "Alerta resolvido. Só volta a aparecer se houver faltas novas.");
+  }, [alertWrite, user, toast]);
+  const reopenAlert = useCallback((key) => { alertWrite({ resolved: { [key]: { _del: true } } }); }, [alertWrite]);
   const isUnread = useCallback((a) => { const r = (alertState.reads || {})[a.key]; return !r || r.sig !== a.sig; }, [alertState]);
   const unread = alerts.filter(isUnread).length;
   const markRead = useCallback((list) => {
@@ -5957,7 +6003,7 @@ function App() {
     getScheduleForMonth, peekSchedule, getMonthDoc, changeStatus, bulkSet, saveNote, saveArrivalTime, saveEmployee, swapDriver, registerExit, saveStore, saveClient,
     editStore: (data) => setEditEntity({ kind: "store", data: data || null }), editClient: (data) => setEditEntity({ kind: "client", data: data || null }),
     nav, toast, openEmployee: (id) => setEmpDrawer(id),
-    alerts, alertsStatus: engine.status, alertState, isUnread, markRead, toggleFollow,
+    alerts, resolvedAlerts, resolveAlert, reopenAlert, alertsStatus: engine.status, alertState, isUnread, markRead, toggleFollow,
     cfg, setCfg, dark, toggleDark, sync,
   };
   const common = { stores, employees, clients, getScheduleForMonth, monthOptions, refsReady };
