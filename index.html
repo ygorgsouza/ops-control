@@ -357,6 +357,8 @@
   .banner-warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
   html.dark .banner-warn{background:#2a2010;color:#fcd34d;border-color:#5a4512;}
   .cchip span.bad{color:#b91c1c;}
+  .wa-preview{border-radius:18px;overflow:hidden;border:1px solid var(--border-c);box-shadow:var(--shadow-md);background:#fff;}
+  .wa-img{display:block;width:100%;height:auto;}
 </style>
 </head>
 <body>
@@ -2953,13 +2955,6 @@ const presTone = (c) => { const p = presencaPct(c); return p === null ? "#64748b
 const slugify = (s) => normTxt(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const fmtHM = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
-async function captureCard(el) {
-  for (let i = 0; i < 40 && typeof window.html2canvas === "undefined"; i++) await new Promise((r) => setTimeout(r, 150));
-  if (typeof window.html2canvas === "undefined") throw new Error("A biblioteca de imagem não carregou. Verifica a ligação e tenta de novo.");
-  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
-  const canvas = await window.html2canvas(el, { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
-  return await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar a imagem."))), "image/png"));
-}
 const canShareFiles = (() => {
   try { return typeof navigator !== "undefined" && !!navigator.canShare && navigator.canShare({ files: [new File([""], "x.png", { type: "image/png" })] }); } catch (e) { return false; }
 })();
@@ -2983,18 +2978,190 @@ function waText(r, date, showPresent) {
   return L.join("\n");
 }
 
-function ReportCard({ r, date, showPresent, registerRef }) {
+/* ---------- Imagem do relatório desenhada em Canvas (medidas exatas, igual em qualquer browser) ---------- */
+const RW = 760, RP = 28;
+const RF = (w, s) => `${w} ${s}px Inter, "Segoe UI", -apple-system, system-ui, Roboto, Arial, sans-serif`;
+async function ensureReportFonts() {
+  try { if (document.fonts && document.fonts.load) await Promise.all(["500", "600", "700", "800"].map((w) => document.fonts.load(`${w} 16px Inter`))); } catch (e) {}
+}
+function rrPath(ctx, x, y, w, h, r) {
+  r = Math.min(r, h / 2, w / 2);
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function fitText(ctx, text, maxW) {
+  if (maxW <= 0) return "";
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+  return t.trimEnd() + "…";
+}
+function wrapText(ctx, text, maxW) {
+  const words = String(text).split(/\s+/).filter(Boolean), lines = [];
+  let cur = "";
+  words.forEach((w) => { const t = cur ? cur + " " + w : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; });
+  if (cur) lines.push(cur);
+  return lines;
+}
+function setLS(ctx, px) { try { ctx.letterSpacing = px + "px"; } catch (e) {} }
+function iconCheck(ctx, cx, cy, s, color, lw = 2.2) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(cx - s * 0.5, cy + s * 0.02); ctx.lineTo(cx - s * 0.14, cy + s * 0.36); ctx.lineTo(cx + s * 0.5, cy - s * 0.32); ctx.stroke(); ctx.restore();
+}
+function iconX(ctx, cx, cy, s, color, lw = 2.2) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx - s * 0.38, cy - s * 0.38); ctx.lineTo(cx + s * 0.38, cy + s * 0.38); ctx.moveTo(cx + s * 0.38, cy - s * 0.38); ctx.lineTo(cx - s * 0.38, cy + s * 0.38); ctx.stroke(); ctx.restore();
+}
+
+// Desenha (draw=true) ou apenas mede (draw=false) o cartão. Devolve a altura total.
+function paintReport(ctx, r, date, showPresent, draw) {
+  const W = RW, P = RP, IW = W - 2 * P;
+  const c = r.c, pct = presencaPct(c), tone = presTone(c);
+  const T = (txt, x, y, font, color, align = "left", base = "middle") => { if (!draw) return; ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(txt, x, y); };
+  const M = (txt, font) => { ctx.font = font; return ctx.measureText(txt).width; };
+  let y = P;
+
+  // Cabeçalho
+  if (draw) {
+    const g = ctx.createLinearGradient(P, y, P + 40, y + 40); g.addColorStop(0, "#4361ee"); g.addColorStop(1, "#7c3aed");
+    ctx.fillStyle = g; rrPath(ctx, P, y, 40, 40, 11); ctx.fill();
+    iconCheck(ctx, P + 20, y + 20, 18, "#ffffff", 3);
+  }
+  T("Delivery Express", P + 52, y + 13, RF(800, 17), "#0f172a");
+  T("Presenças · Colaboradores", P + 52, y + 31, RF(600, 12.5), "#64748b");
+  T(fmtLongDate(date), W - P, y + 20, RF(600, 13), "#475569", "right");
+  y += 40 + 18;
+
+  // Bloco do cliente
+  const bh = 112;
+  if (draw) {
+    ctx.fillStyle = "#f8fafc"; rrPath(ctx, P, y, IW, bh, 16); ctx.fill();
+    ctx.save(); rrPath(ctx, P, y, IW, bh, 16); ctx.clip(); ctx.fillStyle = r.cor || "#4361ee"; ctx.fillRect(P, y, 6, bh); ctx.restore();
+  }
+  const pctTxt = pct === null ? "—" : fmtPct(pct);
+  const pctW = M(pctTxt, RF(800, 50));
+  T(pctTxt, W - P - 22, y + 62, RF(800, 50), tone, "right", "alphabetic");
+  if (draw) { ctx.font = RF(700, 11); setLS(ctx, 1.2); ctx.fillStyle = "#64748b"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic"; ctx.fillText("PRESENÇA NO DIA", W - P - 22, y + 88); setLS(ctx, 0); }
+  if (draw) { ctx.font = RF(700, 11); setLS(ctx, 1.2); ctx.fillStyle = "#64748b"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillText("CLIENTE", P + 28, y + 42); setLS(ctx, 0); }
+  ctx.font = RF(800, 28);
+  T(fitText(ctx, r.nome, IW - 28 - pctW - 44), P + 28, y + 78, RF(800, 28), "#0f172a", "left", "alphabetic");
+  y += bh + 12;
+
+  // Indicadores
+  const sw = (IW - 30) / 4, sh = 86;
+  const stats = [
+    [String(postosOf(c)), "Postos previstos", "#f1f5f9", "#0f172a"],
+    [String(c.ok), "Presentes", "#f1f5f9", "#0f172a"],
+    [String(totalRepostas(c)), "Faltas repostas com backup", totalRepostas(c) ? "#ecfdf5" : "#f1f5f9", totalRepostas(c) ? "#0f766e" : "#0f172a"],
+    [fmtNum(c.semW), "Faltas sem reposição", c.sem ? "#fef2f2" : "#f1f5f9", c.sem ? "#b91c1c" : "#0f172a"],
+  ];
+  stats.forEach(([v, l, bg, fg], i) => {
+    const x = P + i * (sw + 10);
+    if (draw) { ctx.fillStyle = bg; rrPath(ctx, x, y, sw, sh, 14); ctx.fill(); }
+    T(v, x + 16, y + 40, RF(800, 28), fg, "left", "alphabetic");
+    ctx.font = RF(600, 12);
+    wrapText(ctx, l, sw - 30).slice(0, 2).forEach((ln, k) => T(ln, x + 16, y + 58 + k * 15, RF(600, 12), "#64748b", "left", "alphabetic"));
+  });
+  y += sh + 12;
+
+  // Mensagem geral
+  const aus = totalAusencias(c);
+  const banner = postosOf(c) > 0 && aus === 0 ? "Sem faltas — todos os postos assegurados" : aus > 0 && c.sem === 0 ? "Todas as faltas foram repostas com backup" : "";
+  if (banner) {
+    if (draw) {
+      ctx.fillStyle = "#f0fdf4"; rrPath(ctx, P, y, IW, 42, 12); ctx.fill();
+      ctx.strokeStyle = "#bbf7d0"; ctx.lineWidth = 1; rrPath(ctx, P + 0.5, y + 0.5, IW - 1, 41, 12); ctx.stroke();
+      iconCheck(ctx, P + 22, y + 21, 12, "#15803d", 2.4);
+    }
+    T(banner, P + 38, y + 21.5, RF(700, 14), "#15803d");
+    y += 42 + 12;
+  }
+
+  // Lojas
+  const rowH = 46, headH = 50;
+  r.stores.forEach((s) => {
+    const rows = s.abs.slice().sort((a, b) => (a.cob === "sem" ? 0 : 1) - (b.cob === "sem" ? 0 : 1) || a.emp.localeCompare(b.emp));
+    ctx.font = RF(500, 12.5);
+    const pres = showPresent && s.present.length ? wrapText(ctx, "Presentes: " + s.present.slice().sort().join(", "), IW - 32) : [];
+    const h = headH + rows.length * rowH + (pres.length ? 10 + pres.length * 18 : 0) + (s.pending ? 30 : 0) + (rows.length || pres.length || s.pending ? 4 : 0);
+    if (draw) { ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1; rrPath(ctx, P + 0.5, y + 0.5, IW - 1, h - 1, 14); ctx.stroke(); }
+    const sp = presencaPct(s.c), spTxt = sp === null ? "—" : fmtPct(sp);
+    const spW = M(spTxt, RF(800, 18));
+    T(spTxt, W - P - 18, y + headH / 2, RF(800, 18), presTone(s.c), "right");
+    ctx.font = RF(800, 15.5);
+    const nm = fitText(ctx, s.nome, IW * 0.55);
+    const nmW = ctx.measureText(nm).width;
+    T(nm, P + 18, y + headH / 2, RF(800, 15.5), "#0f172a");
+    const meta = `${fmtNum(postosOf(s.c) - s.c.semW)}/${postosOf(s.c)} postos assegurados`;
+    const metaW = M(meta, RF(600, 12.5));
+    if (P + 18 + nmW + 12 + metaW < W - P - 18 - spW - 16) T(meta, P + 18 + nmW + 12, y + headH / 2 + 0.5, RF(600, 12.5), "#64748b");
+    let ry = y + headH;
+    rows.forEach((a) => {
+      if (draw) { ctx.save(); ctx.strokeStyle = "#e2e8f0"; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(P + 18, ry + 0.5); ctx.lineTo(W - P - 18, ry + 0.5); ctx.stroke(); ctx.restore(); }
+      const cy = ry + rowH / 2;
+      const bad = a.cob === "sem";
+      const label = bad ? "Sem reposição" : covLabel(a);
+      ctx.font = RF(800, 12.5);
+      const lab = fitText(ctx, label, IW * 0.46);
+      const pw = ctx.measureText(lab).width + 40, ph = 28, px = W - P - 18 - pw;
+      if (draw) {
+        ctx.fillStyle = bad ? "#fee2e2" : "#ccfbf1"; rrPath(ctx, px, cy - ph / 2, pw, ph, 14); ctx.fill();
+        if (bad) iconX(ctx, px + 15, cy, 10, "#b91c1c", 2.2); else iconCheck(ctx, px + 15, cy, 11, "#0f766e", 2.2);
+      }
+      T(lab, px + 27, cy + 0.5, RF(800, 12.5), bad ? "#b91c1c" : "#0f766e");
+      const tp = absLabel(a);
+      const tpW = M(tp, RF(600, 12.5));
+      T(tp, px - 12, cy + 0.5, RF(600, 12.5), "#64748b", "right");
+      ctx.font = RF(700, 14.5);
+      T(fitText(ctx, a.emp, px - 12 - tpW - 16 - (P + 18)), P + 18, cy + 0.5, RF(700, 14.5), "#0f172a");
+      ry += rowH;
+    });
+    if (pres.length) { ry += 6; pres.forEach((ln, k) => T(ln, P + 18, ry + 9 + k * 18, RF(500, 12.5), "#475569")); ry += pres.length * 18 + 4; }
+    if (s.pending) T(`${s.pending} por confirmar`, P + 18, ry + 15, RF(700, 12.5), "#b45309");
+    y += h + 10;
+  });
+
+  // Rodapé
+  ctx.font = RF(500, 11.5);
+  const foot = wrapText(ctx, `Presença = postos assegurados ÷ postos previstos. Faltas repostas com backup interno ou externo não reduzem a presença. · Atualizado às ${fmtHM(new Date())}`, IW);
+  y += 4;
+  foot.forEach((ln, k) => T(ln, P, y + 8 + k * 16, RF(500, 11.5), "#94a3b8"));
+  y += foot.length * 16 + P - 4;
+  return Math.ceil(y);
+}
+
+async function renderReportCanvas(r, date, showPresent, scale = 2) {
+  await ensureReportFonts();
+  const m = document.createElement("canvas").getContext("2d");
+  const H = paintReport(m, r, date, showPresent, false);
+  const cv = document.createElement("canvas");
+  cv.width = RW * scale; cv.height = H * scale;
+  const ctx = cv.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, RW, H);
+  paintReport(ctx, r, date, showPresent, true);
+  return cv;
+}
+const canvasBlob = (cv) => new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar a imagem."))), "image/png"));
+async function reportBlob(r, date, showPresent) { return canvasBlob(await renderReportCanvas(r, date, showPresent)); }
+
+function ReportCard({ r, date, showPresent }) {
   const ops = useOps();
-  const ref = useRef(null);
+  const [url, setUrl] = useState("");
   const [busy, setBusy] = useState("");
-  useEffect(() => { if (registerRef) registerRef(r.id, ref, r.nome); }, [r.id]);
-  const c = r.c, p = presencaPct(c), postos = postosOf(c);
+  const sig = JSON.stringify([r.c, r.stores.map((s) => [s.nome, s.c, s.pending, s.abs.map((a) => [a.emp, a.st, a.cob, a.cobBy]), showPresent ? s.present : 0]), date, showPresent, r.nome, r.cor]);
+  useEffect(() => {
+    let alive = true;
+    renderReportCanvas(r, date, showPresent).then((cv) => { if (alive) setUrl(cv.toDataURL("image/png")); }).catch((e) => { if (alive) setUrl(""); console.error(e); });
+    return () => { alive = false; };
+  }, [sig]);
   const file = () => `presencas-${slugify(r.nome)}-${date}.png`;
   const run = async (kind) => {
     setBusy(kind);
     try {
       if (kind === "text") { await navigator.clipboard.writeText(waText(r, date, showPresent)); ops.toast("success", `Texto de ${r.nome} copiado — cola no grupo do WhatsApp.`); return; }
-      const blob = await captureCard(ref.current);
+      const blob = await reportBlob(r, date, showPresent);
       if (kind === "share") { await navigator.share({ files: [new File([blob], file(), { type: "image/png" })], title: `Presenças ${r.nome} ${fmtDMY(date)}` }); return; }
       if (kind === "copy") {
         if (!navigator.clipboard || typeof window.ClipboardItem === "undefined") throw new Error("Este navegador não permite copiar imagens. Usa “PNG” e anexa no WhatsApp.");
@@ -3006,49 +3173,11 @@ function ReportCard({ r, date, showPresent, registerRef }) {
     finally { setBusy(""); }
   };
   return (
-    <div className="report-wrap">
-      <div ref={ref} className="wa-card">
-        <div className="wa-top">
-          <div className="wa-brand"><BrandMark size={28} /><div><b>Delivery Express</b><span>Presenças · Colaboradores</span></div></div>
-          <div className="wa-date">{fmtLongDate(date)}</div>
-        </div>
-        <div className="wa-client" style={{ borderLeftColor: r.cor }}>
-          <div className="min-w-0"><div className="wa-label">Cliente</div><div className="wa-client-name">{r.nome}</div></div>
-          <div className="wa-pct" style={{ color: presTone(c) }}>{p === null ? "—" : fmtPct(p)}<small>presença no dia</small></div>
-        </div>
-        <div className="wa-stats">
-          <div><b>{postos}</b><span>Postos previstos</span></div>
-          <div><b>{c.ok}</b><span>Presentes</span></div>
-          <div className={totalRepostas(c) ? "ok" : ""}><b>{totalRepostas(c)}</b><span>Faltas repostas com backup</span></div>
-          <div className={c.sem ? "bad" : ""}><b>{fmtNum(c.semW)}</b><span>Faltas sem reposição</span></div>
-        </div>
-        {totalAusencias(c) === 0 && postos > 0 && <div className="wa-allgood">✓ Sem faltas — todos os postos assegurados</div>}
-        {totalAusencias(c) > 0 && c.sem === 0 && <div className="wa-allgood">✓ Todas as faltas foram repostas com backup</div>}
-        <div className="wa-stores">
-          {r.stores.map((s) => {
-            const sp = presencaPct(s.c), sPost = postosOf(s.c);
-            return (
-              <div key={s.id} className="wa-store">
-                <div className="wa-store-head">
-                  <span className="wa-store-name">{s.nome}</span>
-                  <span className="wa-store-meta">{fmtNum(sPost - s.c.semW)}/{sPost} postos assegurados</span>
-                  <span className="wa-store-pct" style={{ color: presTone(s.c) }}>{sp === null ? "—" : fmtPct(sp)}</span>
-                </div>
-                {s.abs.slice().sort((a, b) => (a.cob === "sem" ? 0 : 1) - (b.cob === "sem" ? 0 : 1) || a.emp.localeCompare(b.emp)).map((a, i) => (
-                  <div key={a.empId + i} className="wa-abs">
-                    <span className="wa-name">{a.emp}</span>
-                    <span className="wa-type">{absLabel(a)}</span>
-                    <span className={`wa-cov ${a.cob === "sem" ? "bad" : "ok"}`}>{a.cob === "sem" ? "✕ Sem reposição" : "✓ " + covLabel(a)}</span>
-                  </div>
-                ))}
-                {showPresent && s.present.length > 0 && <div className="wa-present"><b>Presentes:</b> {s.present.slice().sort().join(", ")}</div>}
-                {s.pending > 0 && <div className="wa-pending">⚠ {s.pending} por confirmar</div>}
-              </div>
-            );
-          })}
-        </div>
-        <div className="wa-foot">Presença = postos assegurados ÷ postos previstos. Faltas repostas com backup interno ou externo não reduzem a presença. · Atualizado às {fmtHM(new Date())}</div>
+    <div className="report-wrap" data-client={r.nome}>
+      <div className="wa-preview">
+        {url ? <img src={url} alt={`Relatório de presenças de ${r.nome}`} className="wa-img" /> : <div className="skeleton rounded-2xl" style={{ height: 420 }} />}
       </div>
+      <div className="sr-only wa-summary">{waText(r, date, showPresent)}</div>
       <div className="report-actions">
         {r.pending > 0 && <span className="text-[11px] font-semibold text-amber-600 mr-auto">{r.pending} por confirmar</span>}
         <button onClick={() => run("copy")} disabled={!!busy} className="btn btn-primary btn-sm"><Icon path={busy === "copy" ? ICONS.refresh : ICONS.layers} size={14} className={busy === "copy" ? "spin" : ""} />Copiar imagem</button>
@@ -3067,7 +3196,6 @@ function DayReportView({ params }) {
   const [sel, setSel] = useState((params && params.clientId) || "");
   const [showPresent, setShowPresent] = useState(() => { try { return localStorage.getItem("opsShowPresent") === "1"; } catch (e) { return false; } });
   const [allBusy, setAllBusy] = useState(false);
-  const refs = useRef({});
   const mk = mkOfISO(date);
   const months = useMemo(() => [mk], [mk]);
   const data = useOpsData({ months, stores, employees, clients, getScheduleForMonth: ops.getScheduleForMonth, enabled: ops.refsReady });
@@ -3080,8 +3208,7 @@ function DayReportView({ params }) {
     setAllBusy(true);
     try {
       for (const r of shown) {
-        const x = refs.current[r.id]; if (!x || !x.ref.current) continue;
-        const blob = await captureCard(x.ref.current);
+        const blob = await reportBlob(r, date, showPresent);
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `presencas-${slugify(r.nome)}-${date}.png`; a.click();
         await new Promise((res) => setTimeout(res, 350));
       }
@@ -3115,7 +3242,7 @@ function DayReportView({ params }) {
         <div className="card"><EmptyState icon={ICONS.calendar} title="Sem registos neste dia" text="Nenhum cliente ativo tem colaboradores esperados ou registos nesta data." action={<button onClick={() => ops.nav("daily", { date })} className="btn btn-primary">Abrir Registo Diário</button>} /></div>
       ) : (
         <div className="report-grid">
-          {shown.map((r) => <ReportCard key={r.id + date} r={r} date={date} showPresent={showPresent} registerRef={(id, ref, nome) => { refs.current[id] = { ref, nome }; }} />)}
+          {shown.map((r) => <ReportCard key={r.id + date} r={r} date={date} showPresent={showPresent} />)}
         </div>
       )}
     </div>
