@@ -359,6 +359,17 @@
   .cchip span.bad{color:#b91c1c;}
   .wa-preview{border-radius:18px;overflow:hidden;border:1px solid var(--border-c);box-shadow:var(--shadow-md);background:#fff;}
   .wa-img{display:block;width:100%;height:auto;}
+  .embedded .page{padding-top:16px;}
+  .out-cell{background:repeating-linear-gradient(135deg,transparent 0 5px,rgba(148,163,184,.18) 5px 7px);color:#94a3b8;font-size:11px;display:flex;align-items:center;justify-content:center;}
+  .dchip{padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--border-c);background:var(--card-bg);color:var(--text-secondary);}
+  .dchip.on{background:var(--accent);color:#fff;border-color:transparent;}
+  .swap-box{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px;border-radius:12px;background:var(--hover);}
+  .swap-box > div{min-width:0;} .swap-box span{display:block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);}
+  .swap-box b{display:block;font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .swap-box em{display:block;font-style:normal;font-size:11.5px;color:var(--text-secondary);}
+  .pick-list{max-height:240px;overflow-y:auto;border:1px solid var(--border-c);border-radius:10px;}
+  .pick{display:block;width:100%;text-align:left;padding:8px 12px;border-bottom:1px solid var(--border-c);}
+  .pick:last-child{border-bottom:none;} .pick:hover{background:var(--hover);} .pick.on{background:rgba(67,97,238,.1);}
+  .pick b{display:block;font-size:13px;} .pick span{display:block;font-size:11px;color:var(--text-secondary);}
 </style>
 </head>
 <body>
@@ -791,7 +802,7 @@ function useOpsData({ months, stores, employees, clients, getScheduleForMonth, e
     const to = `${shiftMonth(list[list.length - 1], 1)}-01`;
     Promise.all([
       Promise.all(list.map((mk) => getScheduleForMonth(mk))),
-      col("backups").where("data", ">=", from).where("data", "<", to).get(),
+      col("backups").where("data", ">=", from).where("data", "<", to).get().catch(() => ({ docs: [] })),
     ]).then(([scheds, snap]) => {
       if (!alive) return;
       const fetched = {};
@@ -1987,7 +1998,8 @@ const MIN_DAY_SAMPLE = 5;    // amostra mínima para mostrar taxa de presença d
 const MIN_MONTH_SAMPLE = 20; // amostra mínima para taxas mensais / tendências
 
 // Um colaborador "Desligado" conta até ao dia da saída (inclusive); sem data de saída não conta (regra herdada da grelha).
-const empActiveOn = (e, iso) => e.estado !== "Desligado" || (!!e.desligadoData && e.desligadoData >= iso);
+// dataEntrada (novo, opcional): não aparece antes do 1.º dia de trabalho.
+const empActiveOn = (e, iso) => (!e.dataEntrada || e.dataEntrada <= iso) && (e.estado !== "Desligado" || (!!e.desligadoData && e.desligadoData >= iso));
 
 // Loja do colaborador numa data. lojaHist (novo, aditivo) guarda mudanças de loja a partir desta versão;
 // sem histórico usa a loja atual (comportamento original).
@@ -2037,7 +2049,8 @@ function buildDayRoster({ iso, employees, stores, clients, cells, includeInactiv
   const storeIds = new Set(stores.map((s) => s.id));
   const rows = [];
   employees.forEach((e) => {
-    if (!empActiveOn(e, iso)) return;
+    // Fora do período (antes de entrar / depois de sair) só aparece se já houver registo gravado nesse dia (histórico).
+    if (!empActiveOn(e, iso)) { const sv = (cells || {})[cellKey(e.id, dayOfISO(iso))]; if (!sv || sv === "Bloqueado") return; }
     const st = storeById.get(storeIdOn(e, iso));
     if (!st) return;
     const cl = st.clienteId ? clientById.get(st.clienteId) || null : null;
@@ -2228,6 +2241,7 @@ function buildAllAlerts({ data, employees, clients, cfg, todayIso }) {
   return out.sort((a, b) => PRIO[a.sev].rank - PRIO[b.sev].rank || (b.date || "").localeCompare(a.date || ""));
 }
 
+const OFF_STATES = ["Folga", "Formação", "Baixa"];
 // Resumo por cliente → loja de um dia (base do relatório para WhatsApp e do Centro de Comando).
 function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
   const roster = buildDayRoster({ iso, employees, stores, clients, cells: cells || {} });
@@ -2240,7 +2254,7 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
   };
   const getS = (C, st) => {
     let S = C.stores.get(st.id);
-    if (!S) { S = { id: st.id, nome: st.nome, ordem: st.ordem ?? 0, c: emptyCounts(), pending: 0, abs: [], present: [] }; C.stores.set(st.id, S); }
+    if (!S) { S = { id: st.id, nome: st.nome, ordem: st.ordem ?? 0, c: emptyCounts(), pending: 0, abs: [], present: [], off: [] }; C.stores.set(st.id, S); }
     return S;
   };
   const storeById = new Map(stores.map((s) => [s.id, s]));
@@ -2248,6 +2262,7 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
     if (row.isPool) return;
     const C = getC(row.client), S = getS(C, row.store);
     if (row.kind === "pending") { S.pending++; C.pending++; }
+    if (row.kind === "other" && OFF_STATES.includes(row.val)) S.off.push({ emp: row.emp.nome, st: row.val });
   });
   recs.forEach((r) => {
     if (r.date !== iso || r.st === "Pool" || !byClient.has(r.clientId || "_none")) return;
@@ -2259,7 +2274,7 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
     if (isAbsence(r)) S.abs.push(r);
     if (r.st === "OK") S.present.push(r.emp);
   });
-  return [...byClient.values()].map((C) => ({ ...C, stores: [...C.stores.values()].filter((S) => postosOf(S.c) > 0 || S.pending > 0).sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome)) }))
+  return [...byClient.values()].map((C) => ({ ...C, stores: [...C.stores.values()].filter((S) => postosOf(S.c) > 0 || S.pending > 0 || S.off.length > 0).sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome)) }))
     .filter((C) => C.stores.length).sort((a, b) => a.nome.localeCompare(b.nome));
 }
 /* @@CORE-END */
@@ -2269,6 +2284,15 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
 /* ====================================================================== */
 const OpsCtx = React.createContext(null);
 const useOps = () => React.useContext(OpsCtx);
+const ALERT_DOC = () => col("schedule").doc("_alertas");
+const readLocalAlerts = () => { try { const d = JSON.parse(localStorage.getItem("opsAlertState") || "{}"); return { reads: d.reads || {}, follow: d.follow || {}, seen: d.seen || {} }; } catch (e) { return { reads: {}, follow: {}, seen: {} }; } };
+// Mensagens de erro em português claro (nunca mostrar "Missing or insufficient permissions").
+function friendlyErr(e, what) {
+  const code = (e && e.code) || "", msg = String((e && e.message) || e || "");
+  if (code === "permission-denied" || /insufficient permissions|permission/i.test(msg)) return `Não foi possível ${what}: o servidor recusou a operação (permissões do Firestore). Fala com o administrador para atualizar as regras.`;
+  if (code === "unavailable" || /offline|network/i.test(msg)) return `Sem ligação ao servidor para ${what}. A alteração será enviada quando a ligação voltar.`;
+  return `Não foi possível ${what}: ${msg}`;
+}
 
 Object.assign(ICONS, {
   command: <><path d="M3 12h4l3-8 4 16 3-8h4"/></>,
@@ -2329,7 +2353,7 @@ async function exportXlsx(filename, sheets) {
 }
 const recToRow = (r) => ({
   Data: fmtDMY(r.date), "Dia semana": DIAS_SEMANA_FULL[r.dow], Semana: weekRangeLabel(r.wk), Colaborador: r.emp, Cliente: r.client, Loja: r.store,
-  Estado: r.st === "Pool" ? "Backup Interno (loja pool)" : r.st, "Loja de origem (pool)": r.st === "Pool" ? r.origStore : "", Cobertura: r.cob ? COB_LABEL[r.cob] : "",
+  Estado: r.st === "Pool" ? "Backup Interno" : r.st, "Enviado de": r.st === "Pool" ? r.origStore : "", Cobertura: r.cob ? COB_LABEL[r.cob] : "",
 });
 
 function downloadBlob(filename, text, type = "application/json") {
@@ -2372,7 +2396,7 @@ function Seg({ value, onChange, options, size = "md" }) {
   return (
     <div className={`seg ${size === "sm" ? "seg-sm" : ""}`} role="tablist">
       {options.map(([v, l, n]) => (
-        <button key={v} role="tab" aria-selected={value === v} onClick={() => onChange(v)} className={value === v ? "on" : ""}>
+        <button type="button" key={v} role="tab" aria-selected={value === v} onClick={() => onChange(v)} className={value === v ? "on" : ""}>
           {l}{n !== undefined && n !== null && <span className="seg-n">{n}</span>}
         </button>
       ))}
@@ -2471,10 +2495,7 @@ const NAV = [
     { id: "alerts", label: "Alertas", icon: ICONS.bell },
   ] },
   { group: "Gestão", items: [
-    { id: "clients", label: "Clientes", icon: ICONS.building },
-    { id: "stores", label: "Lojas", icon: ICONS.store },
-    { id: "employees", label: "Colaboradores", icon: ICONS.users },
-    { id: "backups", label: "Backups", icon: ICONS.backup },
+    { id: "clients", label: "Clientes e Lojas", icon: ICONS.building },
   ] },
   { group: "Sistema", items: [
     { id: "reports", label: "Histórico e Exportação", icon: ICONS.file },
@@ -2630,7 +2651,7 @@ const MORE_STATES = ["Abandono", "Desligado", "Bloqueado"];
 const POOL_STATES = ["Falta", "Folga", "Formação", "Baixa", "Abandono", "Desligado", "Bloqueado"];
 const KIND_SEGS = (s) => [
   { label: "OK", n: s.ok, color: "#22c55e" },
-  { label: "Backup (pool)", n: s.pool, color: "#3b82f6" },
+  { label: "Backup", n: s.pool, color: "#3b82f6" },
   { label: "Ausência coberta", n: s.covered, color: "#14b8a6" },
   { label: "Ausência", n: s.abs, color: "#ef4444" },
   { label: "Outros estados", n: s.other + s.unknown, color: "#a3a3b5" },
@@ -2652,6 +2673,167 @@ function DateNav({ date, setDate }) {
   );
 }
 
+/* ====================================================================== */
+/* GESTÃO DE MOTORISTAS NO REGISTO DIÁRIO — adicionar, trocar, saída       */
+/* ====================================================================== */
+function DaysPicker({ value, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {DIAS_SEMANA.map((d, idx) => {
+        const on = (value || []).includes(idx);
+        return <button type="button" key={idx} onClick={() => onChange(on ? value.filter((x) => x !== idx) : [...(value || []), idx])} className={`dchip ${on ? "on" : ""}`}>{d}</button>;
+      })}
+    </div>
+  );
+}
+function storeLabel(stores, clients, s) {
+  const c = clients.find((x) => x.id === s.clienteId);
+  return `${c ? c.nome + " · " : ""}${s.nome}`;
+}
+const storesSortedFor = (stores, clients) => stores.slice().sort((a, b) => storeLabel(stores, clients, a).localeCompare(storeLabel(stores, clients, b)));
+
+function AddDriverModal({ storeId, date, onClose }) {
+  const ops = useOps();
+  const [f, setF] = useState({ nome: "", lojaId: storeId || "", turno: "Full Time", funcao: "Motorista", veiculo: "", folgaFixa: [], dataEntrada: date });
+  const [busy, setBusy] = useState(false);
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!f.nome.trim() || !f.lojaId || !f.dataEntrada) return;
+    setBusy(true);
+    const ok = await ops.saveEmployee({ ...f, nome: f.nome.trim(), estado: "Ativo", desligadoData: "" });
+    setBusy(false);
+    if (ok) onClose();
+  };
+  return (
+    <Modal title="Adicionar motorista" onClose={onClose}>
+      <form onSubmit={submit}>
+        <Field label="Nome completo"><input required autoFocus className={inputCls} value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ex.: João Silva" /></Field>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field label="Loja">
+            <select required className={inputCls} value={f.lojaId} onChange={(e) => set("lojaId", e.target.value)}>
+              <option value="">— Escolher —</option>
+              {storesSortedFor(ops.stores, ops.clients).map((s) => <option key={s.id} value={s.id}>{storeLabel(ops.stores, ops.clients, s)}</option>)}
+            </select>
+          </Field>
+          <Field label="1.º dia de trabalho"><input required type="date" className={inputCls} value={f.dataEntrada} onChange={(e) => set("dataEntrada", e.target.value)} /></Field>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <Field label="Turno"><select className={inputCls} value={f.turno} onChange={(e) => set("turno", e.target.value)}>{TURNOS.map((t) => <option key={t}>{t}</option>)}</select></Field>
+          <Field label="Função"><select className={inputCls} value={f.funcao} onChange={(e) => set("funcao", e.target.value)}>{FUNCOES.map((t) => <option key={t}>{t}</option>)}</select></Field>
+          <Field label="Veículo (opcional)"><input className={inputCls} value={f.veiculo} onChange={(e) => set("veiculo", e.target.value)} placeholder="Matrícula" /></Field>
+        </div>
+        <Field label="Folga fixa (opcional)"><DaysPicker value={f.folgaFixa} onChange={(v) => set("folgaFixa", v)} /></Field>
+        <p className="text-[11px] text-[var(--text-secondary)] mb-4">Aparece no Registo Diário e na Grelha a partir do 1.º dia de trabalho. Nos dias anteriores fica oculto.</p>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn btn-ghost">Cancelar</button>
+          <button type="submit" disabled={busy} className="btn btn-primary"><Icon path={ICONS.plus} size={15} />Adicionar</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function SwapDriverModal({ emp, date, onClose }) {
+  const ops = useOps();
+  const store = ops.stores.find((s) => s.id === emp.lojaId);
+  const [mode, setMode] = useState("novo");
+  const [f, setF] = useState({ nome: "", existingId: "", date, turno: emp.turno || "Full Time", funcao: emp.funcao || "Motorista", veiculo: emp.veiculo || "", folgaFixa: emp.folgaFixa || [] });
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const candidates = ops.employees.filter((e) => e.id !== emp.id && (!q || normTxt(e.nome).includes(normTxt(q))))
+    .sort((a, b) => (a.estado === "Desligado") - (b.estado === "Desligado") || a.nome.localeCompare(b.nome)).slice(0, 60);
+  const sName = (id) => (ops.stores.find((s) => s.id === id) || {}).nome || "—";
+  const ex = ops.employees.find((e) => e.id === f.existingId);
+  const newName = mode === "novo" ? f.nome.trim() : ex ? ex.nome : "";
+  const valid = !!f.date && (mode === "novo" ? !!newName : !!ex);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!valid) return;
+    setBusy(true);
+    const ok = await ops.swapDriver({ oldEmp: emp, date: f.date, nome: mode === "novo" ? newName : "", existingId: mode === "existente" ? f.existingId : "", turno: f.turno, funcao: f.funcao, veiculo: f.veiculo, folgaFixa: f.folgaFixa });
+    setBusy(false);
+    if (ok) onClose();
+  };
+  return (
+    <Modal title="Trocar motorista" onClose={onClose} width="max-w-xl">
+      <form onSubmit={submit}>
+        <div className="swap-box mb-4">
+          <div><span>Sai</span><b>{emp.nome}</b><em>{store ? store.nome : "—"}</em></div>
+          <Icon path={ICONS.arrowRight} size={18} />
+          <div><span>Entra</span><b>{newName || "—"}</b><em>a partir de {f.date ? fmtDMY(f.date) : "—"}</em></div>
+        </div>
+        <Field label="Data da troca (1.º dia do novo motorista)"><input required type="date" className={inputCls} value={f.date} onChange={(e) => set("date", e.target.value)} /></Field>
+        <div className="mb-3"><Seg value={mode} onChange={setMode} size="sm" options={[["novo", "Motorista novo"], ["existente", "Colaborador já registado"]]} /></div>
+        {mode === "novo" ? (
+          <>
+            <Field label="Nome do novo motorista"><input autoFocus className={inputCls} value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ex.: João Silva" /></Field>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <Field label="Turno"><select className={inputCls} value={f.turno} onChange={(e) => set("turno", e.target.value)}>{TURNOS.map((t) => <option key={t}>{t}</option>)}</select></Field>
+              <Field label="Função"><select className={inputCls} value={f.funcao} onChange={(e) => set("funcao", e.target.value)}>{FUNCOES.map((t) => <option key={t}>{t}</option>)}</select></Field>
+              <Field label="Veículo"><input className={inputCls} value={f.veiculo} onChange={(e) => set("veiculo", e.target.value)} /></Field>
+            </div>
+            <Field label="Folga fixa"><DaysPicker value={f.folgaFixa} onChange={(v) => set("folgaFixa", v)} /></Field>
+          </>
+        ) : (
+          <Field label="Escolher colaborador">
+            <input className={inputCls + " mb-2"} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Pesquisar por nome…" />
+            <div className="pick-list">
+              {candidates.map((c) => (
+                <button type="button" key={c.id} onClick={() => set("existingId", c.id)} className={`pick ${f.existingId === c.id ? "on" : ""}`}>
+                  <b>{c.nome}</b><span>{sName(c.lojaId)}{c.estado === "Desligado" ? " · desligado — será reativado" : " · será movido para esta loja"}</span>
+                </button>
+              ))}
+              {!candidates.length && <div className="text-xs text-[var(--text-secondary)] p-3">Nenhum colaborador encontrado.</div>}
+            </div>
+          </Field>
+        )}
+        <div className="text-[11px] text-[var(--text-secondary)] mb-4 leading-relaxed">
+          {emp.nome} fica desligado com último dia em {f.date ? fmtDMY(shiftISO(f.date, -1)) : "—"} e deixa de aparecer a partir de {f.date ? fmtDMY(f.date) : "—"}. Os registos que já tem ficam guardados. A Grelha Mensal atualiza automaticamente.
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn btn-ghost">Cancelar</button>
+          <button type="submit" disabled={!valid || busy} className="btn btn-primary"><Icon path={ICONS.swap} size={15} />Confirmar troca</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ExitDriverModal({ emp, date, isPool, onClose }) {
+  const ops = useOps();
+  const [type, setType] = useState("Desligado");
+  const [d, setD] = useState(date);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!d) return;
+    setBusy(true);
+    const ok = await ops.registerExit({ emp, date: d, type, isPool });
+    setBusy(false);
+    if (ok) onClose();
+  };
+  return (
+    <Modal title={`Registar saída · ${emp.nome}`} onClose={onClose} width="max-w-md">
+      <form onSubmit={submit}>
+        <div className="mb-3"><Seg value={type} onChange={setType} size="sm" options={[["Desligado", "Desligado"], ["Abandono", "Abandono"]]} /></div>
+        <Field label={type === "Desligado" ? "Último dia de trabalho" : "Dia do abandono"}><input required type="date" className={inputCls} value={d} onChange={(e) => setD(e.target.value)} /></Field>
+        <p className="text-[11px] text-[var(--text-secondary)] mb-4 leading-relaxed">
+          {type === "Desligado"
+            ? `Deixa de aparecer a partir de ${d ? fmtDMY(shiftISO(d, 1)) : "—"}. Não conta como falta.`
+            : `Fica registado “Abandono” em ${d ? fmtDMY(d) : "—"} (conta como falta sem reposição) e deixa de aparecer nos dias seguintes.`}
+          {" "}Para o substituir já com outra pessoa, usa “Trocar motorista”.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn btn-ghost">Cancelar</button>
+          <button type="submit" disabled={busy} className="btn btn-danger"><Icon path={ICONS.userX} size={15} />Registar saída</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function DailyRegisterView({ params }) {
   const ops = useOps();
   const { stores, employees, clients } = ops;
@@ -2665,6 +2847,7 @@ function DailyRegisterView({ params }) {
   const [err, setErr] = useState("");
   const [noteEdit, setNoteEdit] = useState(null);
   const [moreFor, setMoreFor] = useState(null);
+  const [people, setPeople] = useState(null); // { type: "add"|"swap"|"exit", emp, storeId, isPool }
   const [busy, setBusy] = useState({});
   const listRef = useRef(null);
 
@@ -2777,7 +2960,7 @@ function DailyRegisterView({ params }) {
 
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Operação" title="Registo Diário" subtitle={fmtLongDate(date)} right={<><DateNav date={date} setDate={setDate} /><button onClick={() => ops.nav("report", { date, clientId: fClient && fClient !== "_none" ? fClient : "" })} className="btn btn-primary"><Icon path={ICONS.layers} size={15} />Relatório do dia</button></>} />
+      <PageHeader eyebrow="Operação" title="Registo Diário" subtitle={fmtLongDate(date)} right={<><DateNav date={date} setDate={setDate} /><button onClick={() => setPeople({ type: "add", storeId: "" })} className="btn btn-ghost"><Icon path={ICONS.plus} size={15} />Adicionar motorista</button><button onClick={() => ops.nav("report", { date, clientId: fClient && fClient !== "_none" ? fClient : "" })} className="btn btn-primary"><Icon path={ICONS.layers} size={15} />Relatório do dia</button></>} />
 
       {err && <div className="banner banner-err mb-4"><Icon path={ICONS.alert} size={16} />Não foi possível carregar o mês {monthLabelOf(mk)}: {err}</div>}
       {isFuture && <div className="banner banner-info mb-4"><Icon path={ICONS.info} size={16} />Data futura — podes planear folgas, formações ou baixas; as presenças só se confirmam no próprio dia.</div>}
@@ -2852,7 +3035,7 @@ function DailyRegisterView({ params }) {
                     <div className="store-head">
                       <span className="w-2 h-2 rounded-full" style={{ background: s.store.cor || "#9ca3af" }} />
                       <span className="font-bold text-[13px]">{s.store.nome}</span>
-                      {s.store.tipo === "backup_pool" && <span className="tag tag-blue"><Icon path={ICONS.swap} size={10} />Pool de backup</span>}
+                      {s.store.tipo === "backup_pool" && <span className="tag tag-blue"><Icon path={ICONS.swap} size={10} />Backups</span>}
                       {s.store.horaChegada && (
                         <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] ml-2 whitespace-nowrap">
                           <Icon path={ICONS.car} size={13} />Chegada camião
@@ -2861,7 +3044,10 @@ function DailyRegisterView({ params }) {
                             onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }} className="input input-xs w-28" />
                         </label>
                       )}
-                      {pend > 0 && <button onClick={() => bulkOk(s.rows, s.store)} className="btn btn-ghost btn-xs ml-auto" title="Confirma em lote apenas os que estão por verificar"><Icon path={ICONS.checkAll} size={13} />Pendentes → OK ({pend})</button>}
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <button onClick={() => setPeople({ type: "add", storeId: s.store.id })} className="btn btn-ghost btn-xs" title="Adicionar motorista a esta loja"><Icon path={ICONS.plus} size={13} />Motorista</button>
+                        {pend > 0 && <button onClick={() => bulkOk(s.rows, s.store)} className="btn btn-ghost btn-xs" title="Confirma em lote apenas os que estão por verificar"><Icon path={ICONS.checkAll} size={13} />Pendentes → OK ({pend})</button>}
+                      </div>
                     </div>
                     <div className="divide-y divide-[var(--border-c)]">
                       {s.rows.map((r) => {
@@ -2873,6 +3059,8 @@ function DailyRegisterView({ params }) {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <button onClick={() => ops.openEmployee(r.emp.id)} className="font-semibold text-[13.5px] hover:underline text-left truncate">{r.emp.nome}</button>
+                                {r.emp.dataEntrada && r.emp.dataEntrada <= date && r.emp.dataEntrada > shiftISO(date, -7) && <span className="tag tag-blue">{r.emp.dataEntrada === date ? "Entra hoje" : `Novo · desde ${fmtDMY(r.emp.dataEntrada).slice(0, 5)}`}</span>}
+                                {r.emp.estado === "Desligado" && r.emp.desligadoData && <span className="tag tag-red">{r.emp.desligadoData === date ? "Último dia" : `Saiu ${fmtDMY(r.emp.desligadoData).slice(0, 5)}`}</span>}
                                 <span className="text-[11px] text-[var(--text-secondary)]">{r.emp.funcao || "—"} · {r.emp.turno || "—"}</span>
                                 {busy[r.key] && <Icon path={ICONS.refresh} size={12} className="spin text-[var(--text-secondary)]" />}
                               </div>
@@ -2909,12 +3097,16 @@ function DailyRegisterView({ params }) {
                               )}
                               <div className="relative flex items-center">
                                 <button onClick={() => setNoteEdit({ key: k, nome: r.emp.nome, text: note || "" })} className={`icon-btn ${note ? "text-[var(--accent)]" : ""}`} title="Observação (N)"><Icon path={ICONS.note} size={15} /></button>
-                                {!r.isPool && <button onClick={() => setMoreFor(moreFor === r.key ? null : r.key)} className="icon-btn" title="Mais estados"><Icon path={ICONS.more} size={16} /></button>}
+                                <button onClick={() => setMoreFor(moreFor === r.key ? null : r.key)} className="icon-btn" title="Mais opções: trocar, saída, outros estados"><Icon path={ICONS.more} size={16} /></button>
                                 {moreFor === r.key && (
                                   <>
                                     <div className="fixed inset-0 z-30" onClick={() => setMoreFor(null)} />
-                                    <div className="menu absolute right-0 top-9 z-40 w-56">
-                                      {MORE_STATES.map((v) => { const m = statusMeta(v); return <button key={v} onClick={() => setStatus(r, v, false)} className="menu-item"><span className="w-2.5 h-2.5 rounded-full" style={{ background: m.dot }} />{m.label}{EXIT_STATUSES.includes(v) && <span className="ml-auto text-[10px] text-[var(--text-secondary)]">desativa</span>}</button>; })}
+                                    <div className="menu absolute right-0 top-9 z-40 w-60">
+                                      <button onClick={() => { setMoreFor(null); setPeople({ type: "swap", emp: r.emp }); }} className="menu-item font-semibold"><Icon path={ICONS.swap} size={14} />Trocar motorista…</button>
+                                      <button onClick={() => { setMoreFor(null); setPeople({ type: "exit", emp: r.emp, isPool: r.isPool }); }} className="menu-item"><Icon path={ICONS.userX} size={14} />Registar saída…</button>
+                                      <button onClick={() => { setMoreFor(null); ops.openEmployee(r.emp.id); }} className="menu-item"><Icon path={ICONS.edit} size={14} />Ficha / editar</button>
+                                      {!r.isPool && <><div className="h-px bg-[var(--border-c)] my-1" /><div className="px-2.5 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">Outros estados neste dia</div></>}
+                                      {!r.isPool && MORE_STATES.filter((v) => !EXIT_STATUSES.includes(v)).map((v) => { const m = statusMeta(v); return <button key={v} onClick={() => setStatus(r, v, false)} className="menu-item"><span className="w-2.5 h-2.5 rounded-full" style={{ background: m.dot }} />{m.label}{EXIT_STATUSES.includes(v) && <span className="ml-auto text-[10px] text-[var(--text-secondary)]">desativa</span>}</button>; })}
                                       <div className="h-px bg-[var(--border-c)] my-1" />
                                       <button onClick={() => setStatus(r, "", false)} className="menu-item text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-gray-200" />Limpar registo</button>
                                     </div>
@@ -2934,6 +3126,9 @@ function DailyRegisterView({ params }) {
         </div>
       )}
 
+      {people && people.type === "add" && <AddDriverModal storeId={people.storeId} date={date} onClose={() => setPeople(null)} />}
+      {people && people.type === "swap" && <SwapDriverModal emp={people.emp} date={date} onClose={() => setPeople(null)} />}
+      {people && people.type === "exit" && <ExitDriverModal emp={people.emp} date={date} isPool={people.isPool} onClose={() => setPeople(null)} />}
       {noteEdit && (
         <Modal title={`Observação · ${noteEdit.nome}`} onClose={() => setNoteEdit(null)} width="max-w-md">
           <p className="text-xs text-[var(--text-secondary)] mb-2">{fmtLongDate(date)}. A observação é guardada junto do registo do dia e fica visível para todos os utilizadores.</p>
@@ -2969,9 +3164,10 @@ function waText(r, date, showPresent) {
   L.push(`❌ Faltas sem reposição: ${fmtNum(c.semW)}`);
   r.stores.forEach((s) => {
     L.push("");
-    L.push(`*${s.nome}* — ${fmtPct(presencaPct(s.c))}`);
-    if (!s.abs.length) L.push("• Sem faltas");
+    L.push(`*${s.nome}* — ${postosOf(s.c) ? fmtPct(presencaPct(s.c)) : "sem postos previstos"}`);
+    if (!s.abs.length && !(s.off || []).length) L.push("• Sem faltas");
     s.abs.slice().sort((a, b) => a.emp.localeCompare(b.emp)).forEach((a) => L.push(`• ${a.emp}: ${absLabel(a).toLowerCase()} → ${a.cob === "sem" ? "❌ sem reposição" : "✅ " + covLabel(a).toLowerCase()}`));
+    (s.off || []).slice().sort((a, b) => a.emp.localeCompare(b.emp)).forEach((o) => L.push(`• ${o.emp}: ${o.st.toLowerCase()}`));
     if (showPresent && s.present.length) L.push(`Presentes: ${s.present.slice().sort().join(", ")}`);
     if (s.pending) L.push(`⚠️ ${s.pending} por confirmar`);
   });
@@ -3084,16 +3280,18 @@ function paintReport(ctx, r, date, showPresent, draw) {
     const rows = s.abs.slice().sort((a, b) => (a.cob === "sem" ? 0 : 1) - (b.cob === "sem" ? 0 : 1) || a.emp.localeCompare(b.emp));
     ctx.font = RF(500, 12.5);
     const pres = showPresent && s.present.length ? wrapText(ctx, "Presentes: " + s.present.slice().sort().join(", "), IW - 32) : [];
-    const h = headH + rows.length * rowH + (pres.length ? 10 + pres.length * 18 : 0) + (s.pending ? 30 : 0) + (rows.length || pres.length || s.pending ? 4 : 0);
+    const offRows = s.off.slice().sort((a, b) => a.emp.localeCompare(b.emp));
+    const nRows = rows.length + offRows.length;
+    const h = headH + nRows * rowH + (pres.length ? 10 + pres.length * 18 : 0) + (s.pending ? 30 : 0) + (nRows || pres.length || s.pending ? 4 : 0);
     if (draw) { ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1; rrPath(ctx, P + 0.5, y + 0.5, IW - 1, h - 1, 14); ctx.stroke(); }
-    const sp = presencaPct(s.c), spTxt = sp === null ? "—" : fmtPct(sp);
+    const sp = presencaPct(s.c), spTxt = sp === null ? "" : fmtPct(sp);
     const spW = M(spTxt, RF(800, 18));
     T(spTxt, W - P - 18, y + headH / 2, RF(800, 18), presTone(s.c), "right");
     ctx.font = RF(800, 15.5);
     const nm = fitText(ctx, s.nome, IW * 0.55);
     const nmW = ctx.measureText(nm).width;
     T(nm, P + 18, y + headH / 2, RF(800, 15.5), "#0f172a");
-    const meta = `${fmtNum(postosOf(s.c) - s.c.semW)}/${postosOf(s.c)} postos assegurados`;
+    const meta = postosOf(s.c) ? `${fmtNum(postosOf(s.c) - s.c.semW)}/${postosOf(s.c)} postos assegurados` : "sem postos previstos";
     const metaW = M(meta, RF(600, 12.5));
     if (P + 18 + nmW + 12 + metaW < W - P - 18 - spW - 16) T(meta, P + 18 + nmW + 12, y + headH / 2 + 0.5, RF(600, 12.5), "#64748b");
     let ry = y + headH;
@@ -3115,6 +3313,17 @@ function paintReport(ctx, r, date, showPresent, draw) {
       T(tp, px - 12, cy + 0.5, RF(600, 12.5), "#64748b", "right");
       ctx.font = RF(700, 14.5);
       T(fitText(ctx, a.emp, px - 12 - tpW - 16 - (P + 18)), P + 18, cy + 0.5, RF(700, 14.5), "#0f172a");
+      ry += rowH;
+    });
+    offRows.forEach((o) => {
+      if (draw) { ctx.save(); ctx.strokeStyle = "#e2e8f0"; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(P + 18, ry + 0.5); ctx.lineTo(W - P - 18, ry + 0.5); ctx.stroke(); ctx.restore(); }
+      const cy = ry + rowH / 2;
+      ctx.font = RF(800, 12.5);
+      const pw = ctx.measureText(o.st).width + 28, ph = 28, px = W - P - 18 - pw;
+      if (draw) { ctx.fillStyle = "#f1f5f9"; rrPath(ctx, px, cy - ph / 2, pw, ph, 14); ctx.fill(); ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1; rrPath(ctx, px + 0.5, cy - ph / 2 + 0.5, pw - 1, ph - 1, 14); ctx.stroke(); }
+      T(o.st, px + pw / 2, cy + 0.5, RF(800, 12.5), "#475569", "center");
+      ctx.font = RF(700, 14.5);
+      T(fitText(ctx, o.emp, px - 16 - (P + 18)), P + 18, cy + 0.5, RF(700, 14.5), "#475569");
       ry += rowH;
     });
     if (pres.length) { ry += 6; pres.forEach((ln, k) => T(ln, P + 18, ry + 9 + k * 18, RF(500, 12.5), "#475569")); ry += pres.length * 18 + 4; }
@@ -3150,7 +3359,7 @@ function ReportCard({ r, date, showPresent }) {
   const ops = useOps();
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState("");
-  const sig = JSON.stringify([r.c, r.stores.map((s) => [s.nome, s.c, s.pending, s.abs.map((a) => [a.emp, a.st, a.cob, a.cobBy]), showPresent ? s.present : 0]), date, showPresent, r.nome, r.cor]);
+  const sig = JSON.stringify([r.c, r.stores.map((s) => [s.nome, s.c, s.pending, s.off, s.abs.map((a) => [a.emp, a.st, a.cob, a.cobBy]), showPresent ? s.present : 0]), date, showPresent, r.nome, r.cor]);
   useEffect(() => {
     let alive = true;
     renderReportCanvas(r, date, showPresent).then((cv) => { if (alive) setUrl(cv.toDataURL("image/png")); }).catch((e) => { if (alive) setUrl(""); console.error(e); });
@@ -3589,7 +3798,7 @@ function AnalysisView({ params }) {
             </Card>
             <Card title="Backups enviados por cliente">
               {sums.length === 0 ? <EmptyState title="Sem dados" /> : <ChartCanvas type="bar" data={bkChart} options={barStackOpts} height={Math.max(220, sums.length * 34)} />}
-              <p className="text-[11px] text-[var(--text-secondary)] mt-2">Cada falta reposta conta como um backup enviado (interno inclui atribuições da loja pool no mesmo dia e loja).</p>
+              <p className="text-[11px] text-[var(--text-secondary)] mt-2">Cada falta reposta conta como um backup enviado (interno inclui colaboradores de backup enviados nesse dia para a loja).</p>
             </Card>
           </div>
         </>
@@ -3631,6 +3840,14 @@ function ClientModal({ client, onClose, onSave }) {
 
 function ClientsHubView({ params }) {
   const ops = useOps();
+  const [tab, setTab] = useState((params && params.tab) || "clientes");
+  const tabs = <div className="px-4 md:px-8 pt-6 md:pt-8"><Seg value={tab} onChange={setTab} options={[["clientes", "Clientes"], ["lojas", "Lojas"], ["colaboradores", "Colaboradores"]]} /></div>;
+  if (tab === "lojas") return <div className="embedded">{tabs}<StoresView stores={ops.stores} employees={ops.employees} clients={ops.clients} hideTabs /></div>;
+  if (tab === "colaboradores") return <div className="embedded">{tabs}<EmployeesView /></div>;
+  return <div className="embedded">{tabs}<ClientsPane params={params} /></div>;
+}
+function ClientsPane({ params }) {
+  const ops = useOps();
   const { stores, employees, clients } = ops;
   const [mk, setMk] = useState(ops.monthOptions[ops.monthOptions.length - 1]);
   const [q, setQ] = useState("");
@@ -3661,7 +3878,7 @@ function ClientsHubView({ params }) {
       logHistory(form.id ? "Editou" : "Criou", "Cliente", form.nome, form.ativo === false ? "Inativo" : "Ativo");
       ops.toast("success", `Cliente “${form.nome}” guardado.`);
       setModal(null);
-    } catch (e) { ops.toast("error", "Não foi possível guardar o cliente: " + (e.message || e)); }
+    } catch (e) { ops.toast("error", friendlyErr(e, "guardar o cliente")); }
   };
   const toggleActive = async (c) => {
     const ativo = c.ativo === false;
@@ -3679,7 +3896,7 @@ function ClientsHubView({ params }) {
 
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Gestão" title="Clientes" subtitle={`${clients.filter((c) => c.ativo !== false).length} ativos · ${clients.filter((c) => c.ativo === false).length} inativos`}
+      <PageHeader title="Clientes" subtitle={`${clients.filter((c) => c.ativo !== false).length} ativos · ${clients.filter((c) => c.ativo === false).length} inativos`}
         right={<>
           <select value={mk} onChange={(e) => setMk(e.target.value)} className="input w-auto">{[...ops.monthOptions].reverse().map((m) => <option key={m} value={m}>{monthLabelOf(m)}</option>)}</select>
           <button onClick={() => setModal({})} className="btn btn-primary"><Icon path={ICONS.plus} size={15} />Novo cliente</button>
@@ -3788,7 +4005,7 @@ function EmployeesView() {
   const storeOpts = stores.filter((s) => !fClient || s.clienteId === fClient).sort((a, b) => a.nome.localeCompare(b.nome));
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Gestão" title="Colaboradores" subtitle={`${employees.filter((e) => e.estado !== "Desligado").length} ativos · ${employees.filter((e) => e.estado === "Desligado").length} desligados`}
+      <PageHeader title="Colaboradores" subtitle={`${employees.filter((e) => e.estado !== "Desligado").length} ativos · ${employees.filter((e) => e.estado === "Desligado").length} desligados`}
         right={<button onClick={() => setModal({ mode: "new" })} className="btn btn-primary"><Icon path={ICONS.plus} size={15} />Novo colaborador</button>} />
       <div className="toolbar mb-3">
         <div className="relative flex-1 min-w-[200px]"><Icon path={ICONS.search} size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar colaborador…" className="input pl-9" /></div>
@@ -3807,7 +4024,7 @@ function EmployeesView() {
                   <td><span className="text-[var(--text-secondary)]">{c ? c.nome : "—"}</span> · {s ? s.nome : <span className="text-red-500">loja inexistente</span>}</td>
                   <td>{e.turno}</td><td>{e.funcao}</td><td className="text-[var(--text-secondary)]">{e.veiculo || "—"}</td>
                   <td className="text-xs">{(e.folgaFixa || []).length ? (e.folgaFixa || []).slice().sort().map((d) => DIAS_SEMANA[d]).join(", ") : "—"}</td>
-                  <td>{e.estado === "Desligado" ? <span className="tag tag-red">Desligado {e.desligadoData ? fmtDMY(e.desligadoData) : "(sem data)"}</span> : <span className="tag tag-green">Ativo</span>}</td>
+                  <td>{e.estado === "Desligado" ? <span className="tag tag-red">Desligado {e.desligadoData ? fmtDMY(e.desligadoData) : "(sem data)"}</span> : e.dataEntrada && e.dataEntrada > todayISO() ? <span className="tag tag-blue">Entra {fmtDMY(e.dataEntrada)}</span> : <span className="tag tag-green">Ativo{e.dataEntrada ? ` · desde ${fmtDMY(e.dataEntrada)}` : ""}</span>}</td>
                   <td onClick={(ev) => ev.stopPropagation()}><div className="flex justify-end gap-1">
                     <button onClick={() => setModal({ mode: "edit", data: e })} className="icon-btn" title="Editar"><Icon path={ICONS.edit} size={15} /></button>
                     <button onClick={() => setDeleting(e)} className="icon-btn text-red-500" title="Eliminar"><Icon path={ICONS.trash} size={15} /></button>
@@ -3984,7 +4201,7 @@ function ReportsView({ params }) {
             <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)]">a <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} className="input w-auto" /></label>
             <select value={fClient} onChange={(e) => { setFClient(e.target.value); setFStore(""); }} className="input w-auto"><option value="">Todos os clientes</option>{clients.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select>
             <select value={fStore} onChange={(e) => setFStore(e.target.value)} className="input w-auto"><option value="">Todas as lojas</option>{stores.filter((s) => !fClient || s.clienteId === fClient).sort((a, b) => a.nome.localeCompare(b.nome)).map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}</select>
-            <select value={fSt} onChange={(e) => setFSt(e.target.value)} className="input w-auto"><option value="ocorrencias">Faltas e backups</option><option value="ausencias">Só faltas</option><option value="">Todos os estados</option>{STATUS_OPTIONS.filter((s) => s.value).map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}<option value="Pool">Backup Interno (loja pool)</option></select>
+            <select value={fSt} onChange={(e) => setFSt(e.target.value)} className="input w-auto"><option value="ocorrencias">Faltas e backups</option><option value="ausencias">Só faltas</option><option value="">Todos os estados</option>{STATUS_OPTIONS.filter((s) => s.value).map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}<option value="Pool">Backup enviado para outra loja</option></select>
             <select value={fCob} onChange={(e) => setFCob(e.target.value)} className="input w-auto"><option value="">Toda a cobertura</option><option value="sem">Sem reposição</option><option value="int">Backup interno</option><option value="ext">Backup externo</option></select>
             <div className="relative flex-1 min-w-[180px]"><Icon path={ICONS.search} size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Colaborador, loja, cliente…" className="input pl-9" /></div>
             <button onClick={doExport} disabled={exporting || data.status !== "ready"} className="btn btn-primary"><Icon path={exporting ? ICONS.refresh : ICONS.download} size={15} className={exporting ? "spin" : ""} />Exportar Excel</button>
@@ -4016,7 +4233,7 @@ function ReportsView({ params }) {
                         <td>{DIAS_SEMANA[r.dow]}</td>
                         <td><button className="font-semibold hover:underline text-left" onClick={() => ops.openEmployee(r.empId)}>{r.emp}</button></td>
                         <td>{r.client}</td><td>{r.store}</td>
-                        <td><Pill color={TYPE_COLORS[r.st] || statusMeta(r.st).dot || "#6b7280"}>{r.st === "Pool" ? `Backup Interno (pool · ${r.origStore})` : r.st}</Pill></td>
+                        <td><Pill color={TYPE_COLORS[r.st] || statusMeta(r.st).dot || "#6b7280"}>{r.st === "Pool" ? `Backup Interno · ${r.origStore}` : r.st}</Pill></td>
                         <td>{r.cob ? <Pill color={COB_COLOR[r.cob]}>{COB_LABEL[r.cob]}</Pill> : "—"}</td>
                       </tr>
                     ))}
@@ -4064,16 +4281,16 @@ function SettingsView() {
   const backupJson = async () => {
     setBusy(true);
     try {
-      const names = ["stores", "employees", "clients", "backups", "schedule", "alertState"];
-      const snaps = await Promise.all(names.map((n) => col(n).get()));
-      const audit = await col("auditLog").orderBy("timestamp", "desc").limit(5000).get();
+      const names = ["stores", "employees", "clients", "backups", "schedule"];
+      const snaps = await Promise.all(names.map((n) => col(n).get().catch(() => ({ docs: [] }))));
+      const audit = await col("auditLog").orderBy("timestamp", "desc").limit(5000).get().catch(() => ({ docs: [] }));
       const out = { app: APP_NAME, exportedAt: new Date().toISOString(), exportedBy: (ops.user && ops.user.displayName) || "", collections: {} };
       names.forEach((n, i) => { out.collections[n] = {}; snaps[i].docs.forEach((d) => { out.collections[n][d.id] = d.data(); }); });
       out.collections.auditLog = {}; audit.docs.forEach((d) => { out.collections.auditLog[d.id] = d.data(); });
       downloadBlob(`copia-seguranca-presencas-${todayISO()}.json`, JSON.stringify(out, null, 1));
       logHistory("Criou", "Grelha", "Cópia de segurança", "Exportação JSON completa");
       ops.toast("success", "Cópia de segurança descarregada.");
-    } catch (e) { ops.toast("error", "Falha na cópia de segurança: " + (e.message || e)); }
+    } catch (e) { ops.toast("error", friendlyErr(e, "criar a cópia de segurança")); }
     setBusy(false);
   };
   return (
@@ -4104,7 +4321,7 @@ function SettingsView() {
               <div>Estado atual: {ops.sync.online ? "online" : "offline"} · {ops.sync.pending ? `${ops.sync.pending} mês(es) com alterações por confirmar` : "tudo sincronizado"}.</div>
             </div>
             <button onClick={backupJson} disabled={busy} className="btn btn-ghost"><Icon path={busy ? ICONS.refresh : ICONS.download} size={15} className={busy ? "spin" : ""} />Descarregar cópia de segurança (JSON)</button>
-            <p className="text-[11px] text-[var(--text-secondary)] mt-2">Inclui lojas, colaboradores, clientes, backups, toda a grelha, estado dos alertas e os últimos 5 000 eventos de auditoria. Não existe importação automática — a restauração é feita de forma controlada a partir deste ficheiro.</p>
+            <p className="text-[11px] text-[var(--text-secondary)] mt-2">Inclui lojas, colaboradores, clientes, toda a grelha (com o estado dos alertas) e os últimos 5 000 eventos de auditoria. Não existe importação automática — a restauração é feita de forma controlada a partir deste ficheiro.</p>
           </Card>
         </div>
         <Card title="Estados de presença — referência" className="xl:col-span-2">
@@ -4273,7 +4490,7 @@ function GridView({ stores, employees, clients, getScheduleForMonth, saveCellSta
   const days = Array.from({ length: nDays }, (_, i) => i + 1);
 
   // Desligados só saem da grelha no mês seguinte ao da data de saída (desligadoData).
-  const activeEmployees = useMemo(() => employees.filter(e => e.estado !== "Desligado" || (!!e.desligadoData && e.desligadoData.slice(0, 7) >= mk)), [employees, mk]);
+  const activeEmployees = useMemo(() => { const withCells = new Set(); Object.keys(schedule || {}).forEach(k => { const v = schedule[k]; if (v && v !== "Bloqueado") withCells.add(k.slice(0, k.lastIndexOf("_"))); }); return employees.filter(e => { const hasCells = withCells.has(e.id); if (e.dataEntrada && e.dataEntrada.slice(0, 7) > mk && !hasCells) return false; return e.estado !== "Desligado" || (!!e.desligadoData && e.desligadoData.slice(0, 7) >= mk) || hasCells; }); }, [employees, mk, schedule]);
   const storesSorted = useMemo(() => [...stores].sort((a,b)=> (a.ordem??0)-(b.ordem??0) || a.nome.localeCompare(b.nome)), [stores]);
 
   const visibleStores = storesSorted.filter(s => (!fLoja || s.id === fLoja) && (!fCliente || s.clienteId === fCliente));
@@ -4517,6 +4734,11 @@ function GridView({ stores, employees, clients, getScheduleForMonth, saveCellSta
                             {emps.map(e => {
                               const k = cellKey(e.id, day);
                               const isPoolStore = s.tipo === "backup_pool";
+                              const outIso = isoDate(y, m, day);
+                              if (!schedule[k] && !empActiveOn(e, outIso)) {
+                                const before = e.dataEntrada && outIso < e.dataEntrada;
+                                return <td key={k} className="border-b border-l border-[var(--border-c)] p-0.5 text-center"><div className="w-full h-7 min-w-[52px] rounded-md out-cell" title={before ? `Entrou em ${fmtDMY(e.dataEntrada)}` : `Saiu (último dia ${e.desligadoData ? fmtDMY(e.desligadoData) : "—"})`}>{before ? "" : "—"}</div></td>;
+                              }
                               const val = effectiveValue(e, day); // aplica folga fixa também nas lojas pool
                               const isAuto = !schedule[k] && val === "Folga";
                               const meta = statusMeta(val);
@@ -4588,7 +4810,7 @@ function GridView({ stores, employees, clients, getScheduleForMonth, saveCellSta
 /* COLABORADORES                                                          */
 /* ---------------------------------------------------------------------- */
 function EmployeeModal({ employee, stores, onClose, onSave }) {
-  const [form, setForm] = useState(employee || { nome: "", lojaId: stores[0]?.id || "", turno: "Part Time", veiculo: "", funcao: "Motorista", estado: "Ativo", desligadoData: "", folgaFixa: [] });
+  const [form, setForm] = useState(employee || { nome: "", lojaId: stores[0]?.id || "", turno: "Part Time", veiculo: "", funcao: "Motorista", estado: "Ativo", desligadoData: "", dataEntrada: "", folgaFixa: [] });
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const toggleDia = (idx) => setForm(prev => {
     const cur = prev.folgaFixa || [];
@@ -4627,8 +4849,13 @@ function EmployeeModal({ employee, stores, onClose, onSave }) {
               <option value="Desligado">Desligado</option>
             </select>
           </Field>
+          {form.estado !== "Desligado" && (
+            <Field label="1.º dia de trabalho (opcional)">
+              <input type="date" className={inputCls} value={form.dataEntrada||""} onChange={e=>set("dataEntrada", e.target.value)} />
+            </Field>
+          )}
           {form.estado === "Desligado" && (
-            <Field label="Data de desligamento">
+            <Field label="Último dia de trabalho">
               <input type="date" className={inputCls} value={form.desligadoData||""} onChange={e=>set("desligadoData", e.target.value)} />
             </Field>
           )}
@@ -5169,7 +5396,7 @@ function App() {
   const [user, setUser] = useState(() => {
     try { const raw = localStorage.getItem("opsUser"); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   });
-  const [view, setView] = useState(() => { try { const v = localStorage.getItem("opsView"); return VIEW_IDS.includes(v) ? v : "report"; } catch (e) { return "report"; } });
+  const [view, setView] = useState(() => { try { const v = localStorage.getItem("opsView"); return VIEW_IDS.includes(v) ? v : "daily"; } catch (e) { return "report"; } });
   const [viewParams, setViewParams] = useState(null);
   const [collapsed, setCollapsedState] = useState(() => { try { return localStorage.getItem("opsCollapsed") === "1"; } catch (e) { return false; } });
   const [mobileNav, setMobileNav] = useState(false);
@@ -5195,6 +5422,7 @@ function App() {
   const employeesRef = useRef([]);
   const storesRef = useRef([]);
   const lastSeenWrite = useRef("");
+  const alertLocal = useRef(false);
   useEffect(() => { employeesRef.current = employees; }, [employees]);
   useEffect(() => { storesRef.current = stores; }, [stores]);
 
@@ -5247,7 +5475,13 @@ function App() {
     );
     const unsub2 = col("employees").onSnapshot((snap) => { setEmployees(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); mark("e"); }, (err) => toast("error", "Erro a ler colaboradores: " + err.message));
     const unsub3 = col("clients").onSnapshot((snap) => { setClients(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); mark("c"); }, (err) => toast("error", "Erro a ler clientes: " + err.message));
-    const unsub4 = col("alertState").doc("main").onSnapshot((snap) => { const d = snap.exists ? snap.data() : {}; setAlertState({ reads: d.reads || {}, follow: d.follow || {}, seen: d.seen || {}, loaded: true }); }, () => setAlertState((s) => ({ ...s, loaded: true })));
+    // Estado dos alertas (lidos / acompanhamento): guardado num documento da coleção "schedule" (já autorizada).
+    // Se o Firestore recusar, passa automaticamente a guardar neste navegador — sem mensagens de erro.
+    const unsub4 = ALERT_DOC().onSnapshot((snap) => {
+      if (alertLocal.current) return;
+      const d = snap.exists ? snap.data() : {};
+      setAlertState({ reads: d.reads || {}, follow: d.follow || {}, seen: d.seen || {}, loaded: true });
+    }, () => { alertLocal.current = true; setAlertState({ ...readLocalAlerts(), loaded: true }); });
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, [user]);
 
@@ -5293,8 +5527,8 @@ function App() {
       console.error("Falha ao gravar", err);
       if (revert) revert();
       setVersion((v) => v + 1);
-      setSync((s) => ({ ...s, error: "Falha ao gravar: " + err.message }));
-      toast("error", "Não foi possível gravar a alteração (" + err.message + "). O valor anterior foi reposto.");
+      setSync((s) => ({ ...s, error: friendlyErr(err, "gravar") }));
+      toast("error", friendlyErr(err, "gravar a alteração") + " O valor anterior foi reposto.");
     });
   }, [toast]);
 
@@ -5313,7 +5547,7 @@ function App() {
     Object.assign(cells, plan.batch);
     setVersion((v) => v + 1);
     writeMonth(mk, "cells", plan.batch, () => { const c = monthDocs.current[mk] && monthDocs.current[mk].cells; if (!c) return; Object.keys(prev).forEach((k) => { if (prev[k] === undefined) delete c[k]; else c[k] = prev[k]; }); });
-    if (plan.empUpdate) col("employees").doc(empId).set(plan.empUpdate, { merge: true }).catch((err) => toast("error", "Falha ao atualizar o estado do colaborador: " + err.message));
+    if (plan.empUpdate) col("employees").doc(empId).set(plan.empUpdate, { merge: true }).catch((err) => toast("error", friendlyErr(err, "atualizar o colaborador")));
     logHistory("Editou", "Grelha", (emp && emp.nome) || "—", plan.log);
     if (plan.exit) toast("info", `${(emp && emp.nome) || "Colaborador"} desativado (saída ${fmtDMY(isoDate(y, mo - 1, day))}).`);
     if (plan.reactivate) toast("info", `${(emp && emp.nome) || "Colaborador"} reativado.`);
@@ -5362,8 +5596,51 @@ function App() {
       logHistory(data.id ? "Editou" : "Criou", "Colaborador", nome, `Loja: ${storeName(payload.lojaId)} · Turno: ${payload.turno}${payload.lojaHist && prev && prev.lojaId !== payload.lojaId ? ` · mudou de ${storeName(prev.lojaId)}` : ""}`);
       toast("success", `${nome} guardado.`);
       return true;
-    } catch (e) { toast("error", "Não foi possível guardar: " + (e.message || e)); return false; }
+    } catch (e) { toast("error", friendlyErr(e, "guardar")); return false; }
   }, [toast]);
+
+  // Troca de motorista: o que sai fica desligado no dia anterior; o novo começa na data escolhida (mesma loja).
+  const swapDriver = useCallback(async ({ oldEmp, date, nome, existingId, turno, funcao, veiculo, folgaFixa }) => {
+    const lastDay = shiftISO(date, -1);
+    const storeName = (id) => (storesRef.current.find((s) => s.id === id) || {}).nome || "—";
+    try {
+      let newName = nome;
+      if (existingId) {
+        const ex = employeesRef.current.find((e) => e.id === existingId);
+        if (!ex) throw new Error("Colaborador não encontrado.");
+        newName = ex.nome;
+        const upd = { estado: "Ativo", desligadoData: "" };
+        if (ex.estado === "Desligado") upd.dataEntrada = date;
+        if (ex.lojaId !== oldEmp.lojaId) {
+          const hist = Array.isArray(ex.lojaHist) && ex.lojaHist.length ? ex.lojaHist.slice() : [{ lojaId: ex.lojaId, desde: "0000-01-01" }];
+          hist.push({ lojaId: oldEmp.lojaId, desde: date });
+          upd.lojaId = oldEmp.lojaId; upd.lojaHist = hist;
+        }
+        await col("employees").doc(existingId).set(upd, { merge: true });
+      } else {
+        const dup = employeesRef.current.find((e) => normTxt(e.nome) === normTxt(nome));
+        if (dup && !window.confirm(`Já existe um colaborador chamado “${dup.nome}” (${storeName(dup.lojaId)}${dup.estado === "Desligado" ? ", desligado" : ""}).\n\nCriar outro com o mesmo nome? (Para reutilizar o existente, escolhe “Colaborador já registado”.)`)) return false;
+        await col("employees").add({ nome, lojaId: oldEmp.lojaId, turno, funcao, veiculo: veiculo || "", folgaFixa: folgaFixa || [], estado: "Ativo", desligadoData: "", dataEntrada: date, substituiu: oldEmp.id, criadoEm: Date.now() });
+      }
+      await col("employees").doc(oldEmp.id).set({ estado: "Desligado", desligadoData: lastDay, substituidoPor: newName }, { merge: true });
+      logHistory("Editou", "Colaborador", oldEmp.nome, `Troca em ${storeName(oldEmp.lojaId)}: sai ${oldEmp.nome} (último dia ${fmtDMY(lastDay)}) · entra ${newName} (desde ${fmtDMY(date)})`);
+      toast("success", `${oldEmp.nome} → ${newName} a partir de ${fmtDMY(date)}.`);
+      return true;
+    } catch (e) { toast("error", friendlyErr(e, "trocar o motorista")); return false; }
+  }, [toast]);
+
+  const registerExit = useCallback(async ({ emp, date, type, isPool }) => {
+    try {
+      if (type === "Abandono") {
+        const ok = await changeStatus({ mk: mkOfISO(date), day: dayOfISO(date), empId: emp.id, value: "Abandono", isPool, source: "exit" });
+        return ok !== false;
+      }
+      await col("employees").doc(emp.id).set({ estado: "Desligado", desligadoData: date }, { merge: true });
+      logHistory("Editou", "Colaborador", emp.nome, `Desligado · último dia ${fmtDMY(date)}`);
+      toast("success", `${emp.nome} desligado (último dia ${fmtDMY(date)}).`);
+      return true;
+    } catch (e) { toast("error", friendlyErr(e, "registar a saída")); return false; }
+  }, [changeStatus, toast]);
 
   const monthOptions = useMemo(() => {
     const now = new Date(); const arr = [];
@@ -5379,18 +5656,30 @@ function App() {
     ? buildAllAlerts({ data: engine, employees, clients, cfg, todayIso }) : []),
     // eslint-disable-next-line
     [engine.status, engine.recs, engine.schedules, engine.monthHasData, employees, stores, clients, cfg, engineMonths, todayIso, clock]);
+  const alertWrite = useCallback((patch) => {
+    const applyLocal = () => {
+      const cur = readLocalAlerts();
+      Object.keys(patch).forEach((grp) => { cur[grp] = cur[grp] || {}; Object.keys(patch[grp]).forEach((k) => { const v = patch[grp][k]; if (v && v._del) delete cur[grp][k]; else cur[grp][k] = v; }); });
+      try { localStorage.setItem("opsAlertState", JSON.stringify(cur)); } catch (e) {}
+      setAlertState({ ...cur, loaded: true });
+    };
+    if (alertLocal.current) { applyLocal(); return; }
+    const fs = {};
+    Object.keys(patch).forEach((grp) => { fs[grp] = {}; Object.keys(patch[grp]).forEach((k) => { const v = patch[grp][k]; fs[grp][k] = v && v._del ? firebase.firestore.FieldValue.delete() : v; }); });
+    ALERT_DOC().set(fs, { merge: true }).catch(() => { alertLocal.current = true; applyLocal(); });
+  }, []);
   const isUnread = useCallback((a) => { const r = (alertState.reads || {})[a.key]; return !r || r.sig !== a.sig; }, [alertState]);
   const unread = alerts.filter(isUnread).length;
   const markRead = useCallback((list) => {
     if (!list.length) return;
     const reads = {};
     list.forEach((a) => { reads[a.key] = { at: Date.now(), user: (user && user.displayName) || "", sig: a.sig }; });
-    col("alertState").doc("main").set({ reads }, { merge: true }).catch((e) => toast("error", "Não foi possível marcar como lido: " + e.message));
-  }, [user, toast]);
+    alertWrite({ reads });
+  }, [user, alertWrite]);
   const toggleFollow = useCallback((key) => {
     const cur = (alertState.follow || {})[key];
-    col("alertState").doc("main").set({ follow: { [key]: { on: !(cur && cur.on), at: Date.now(), user: (user && user.displayName) || "" } } }, { merge: true }).catch((e) => toast("error", e.message));
-  }, [alertState, user, toast]);
+    alertWrite({ follow: { [key]: { on: !(cur && cur.on), at: Date.now(), user: (user && user.displayName) || "" } } });
+  }, [alertState, user, alertWrite]);
   useEffect(() => {
     if (!user || !alertState.loaded || engine.status !== "ready") return;
     const seen = alertState.seen || {}; const now = Date.now(); const upd = {};
@@ -5399,13 +5688,13 @@ function App() {
       const lastDay = s && s.last ? dateKey(new Date(s.last)) : "";
       if (!s || s.sig !== a.sig || lastDay !== todayIso) upd[a.key] = { title: a.title, kind: a.kind, sev: a.sev, period: a.period, sig: a.sig, first: s && s.first ? s.first : now, last: now };
     });
-    Object.keys(seen).forEach((k) => { if (seen[k] && seen[k].last && now - seen[k].last > 180 * 864e5) upd[k] = firebase.firestore.FieldValue.delete(); });
+    Object.keys(seen).forEach((k) => { if (seen[k] && seen[k].last && now - seen[k].last > 180 * 864e5) upd[k] = { _del: true }; });
     const keys = Object.keys(upd);
     if (!keys.length) return;
     const sigKey = todayIso + "|" + keys.sort().map((k) => k + ":" + (upd[k] && upd[k].sig)).join(",");
     if (lastSeenWrite.current === sigKey) return;
     lastSeenWrite.current = sigKey;
-    col("alertState").doc("main").set({ seen: upd }, { merge: true }).catch(() => {});
+    alertWrite({ seen: upd });
   }, [alerts, alertState, engine.status, todayIso, user]);
 
   // Atalho global de pesquisa
@@ -5419,7 +5708,7 @@ function App() {
 
   const ops = {
     user, stores, employees, clients, refsReady, version, monthOptions,
-    getScheduleForMonth, peekSchedule, getMonthDoc, changeStatus, bulkSet, saveNote, saveArrivalTime, saveEmployee,
+    getScheduleForMonth, peekSchedule, getMonthDoc, changeStatus, bulkSet, saveNote, saveArrivalTime, saveEmployee, swapDriver, registerExit,
     nav, toast, openEmployee: (id) => setEmpDrawer(id),
     alerts, alertsStatus: engine.status, alertState, isUnread, markRead, toggleFollow,
     cfg, setCfg, dark, toggleDark, sync,
@@ -5441,9 +5730,6 @@ function App() {
               {view === "analyses" && <AnalysisView params={viewParams} />}
               {view === "report" && <DayReportView params={viewParams} />}
               {view === "clients" && <ClientsHubView params={viewParams} />}
-              {view === "stores" && <StoresView stores={stores} employees={employees} clients={clients} hideTabs />}
-              {view === "employees" && <EmployeesView />}
-              {view === "backups" && <BackupsView employees={employees} monthOptions={monthOptions} />}
               {view === "reports" && <ReportsView params={viewParams} />}
               {view === "settings" && <SettingsView />}
             </main>
