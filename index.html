@@ -2144,10 +2144,13 @@ function addRec(c, r) {
 const totalFaltas = (c) => c.falta + c.meia + c.abandono;                     // células de ausência (sem contar backups)
 const totalAusencias = (c) => c.falta + c.meia + c.abandono + c.bkpInt + c.bkpExt; // todas as faltas do colaborador
 const totalRepostas = (c) => c.cInt + c.cExt;
-const postosOf = (c) => c.ok + totalAusencias(c);
+// pend = colaboradores ainda por confirmar (só nas vistas de um dia): contam como posto previsto NÃO assegurado
+// até serem confirmados — o dia nunca aparece a 100% com confirmações em falta.
+const postosOf = (c) => c.ok + totalAusencias(c) + (c.pend || 0);
+const assuredOf = (c) => postosOf(c) - c.semW - (c.pend || 0);
 const totalBkpInt = (c) => c.cInt;
 const outrosEstados = (c) => c.formacao + c.folga + c.bloq;
-const presencaPct = (c) => { const p = postosOf(c); return p > 0 ? Math.round(((p - c.semW) / p) * 1000) / 10 : null; };
+const presencaPct = (c) => { const p = postosOf(c); return p > 0 ? Math.round((assuredOf(c) / p) * 1000) / 10 : null; };
 const countRecs = (recs) => { const c = emptyCounts(); recs.forEach((r) => addRec(c, r)); return c; };
 const isAbsence = (r) => ABS_TYPES.includes(r.st) || r.st === "Backup Interno" || r.st === "Backup Externo";
 const fmtNum = (n) => String(Math.round(n * 10) / 10).replace(".", ",");
@@ -2274,6 +2277,7 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
     if (isAbsence(r)) S.abs.push(r);
     if (r.st === "OK") S.present.push(r.emp);
   });
+  byClient.forEach((C) => { C.c.pend = C.pending; C.stores.forEach((S) => { S.c.pend = S.pending; }); });
   return [...byClient.values()].map((C) => ({ ...C, stores: [...C.stores.values()].filter((S) => postosOf(S.c) > 0 || S.pending > 0 || S.off.length > 0).sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome)) }))
     .filter((C) => C.stores.length).sort((a, b) => a.nome.localeCompare(b.nome));
 }
@@ -2898,7 +2902,9 @@ function DailyRegisterView({ params }) {
   const st = useMemo(() => rosterStats(scoped), [scoped]);
   const dayC = useMemo(() => {
     const ids = new Set(scoped.map((r) => r.store.id));
-    return countRecs(monthRecs.filter((r) => r.date === date && (ids.has(r.storeId) || (!fClient && !r.storeId))));
+    const c = countRecs(monthRecs.filter((r) => r.date === date && (ids.has(r.storeId) || (!fClient && !r.storeId))));
+    c.pend = scoped.filter((r) => r.kind === "pending" && !r.isPool).length;
+    return c;
   }, [monthRecs, date, scoped, fClient]);
   const qn = normTxt(q);
   const visible = useMemo(() => scoped.filter((r) => {
@@ -2983,7 +2989,7 @@ function DailyRegisterView({ params }) {
             </div>
             <ProgressBar segs={KIND_SEGS(st)} total={st.universe} />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-              <div className="mini"><span>Presença do dia</span><b style={{ color: presTone(dayC) }}>{postosOf(dayC) ? fmtPct(presencaPct(dayC)) : "—"}</b><em>{fmtNum(postosOf(dayC) - dayC.semW)} de {postosOf(dayC)} postos assegurados</em></div>
+              <div className="mini"><span>Presença do dia</span><b style={{ color: presTone(dayC) }}>{postosOf(dayC) ? fmtPct(presencaPct(dayC)) : "—"}</b><em>{fmtNum(assuredOf(dayC))} de {postosOf(dayC)} postos assegurados{dayC.pend ? ` · ${dayC.pend} por confirmar` : ""}</em></div>
               <div className="mini"><span>Faltas</span><b>{totalAusencias(dayC)}</b><em>{totalRepostas(dayC)} com backup · {fmtNum(dayC.semW)} sem</em></div>
               <div className="mini"><span>Sem reposição</span><b style={{ color: dayC.sem ? "#b91c1c" : undefined }}>{fmtNum(dayC.semW)}</b><em>só estas baixam a presença</em></div>
               <div className="mini"><span>Backups enviados</span><b>{totalRepostas(dayC)}</b><em>{dayC.cInt} interno · {dayC.cExt} externo</em></div>
@@ -3146,7 +3152,7 @@ function DailyRegisterView({ params }) {
 /* ====================================================================== */
 /* RELATÓRIO DO DIA — cartão por cliente pronto para o WhatsApp            */
 /* ====================================================================== */
-const presTone = (c) => { const p = presencaPct(c); return p === null ? "#64748b" : c.sem === 0 ? "#15803d" : p >= 95 ? "#b45309" : "#b91c1c"; };
+const presTone = (c) => { const p = presencaPct(c); return p === null ? "#64748b" : c.sem > 0 ? (p >= 95 ? "#b45309" : "#b91c1c") : (c.pend ? "#b45309" : "#15803d"); };
 const slugify = (s) => normTxt(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const fmtHM = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
@@ -3162,6 +3168,7 @@ function waText(r, date, showPresent) {
   L.push(`✅ Presentes: ${c.ok} de ${postosOf(c)} postos`);
   L.push(`🔁 Faltas repostas com backup: ${totalRepostas(c)}${totalRepostas(c) ? ` (${c.cInt} interno · ${c.cExt} externo)` : ""}`);
   L.push(`❌ Faltas sem reposição: ${fmtNum(c.semW)}`);
+  if (c.pend) L.push(`⚠️ Por confirmar: ${c.pend} (ainda não contam como posto assegurado)`);
   r.stores.forEach((s) => {
     L.push("");
     L.push(`*${s.nome}* — ${postosOf(s.c) ? fmtPct(presencaPct(s.c)) : "sem postos previstos"}`);
@@ -3263,14 +3270,19 @@ function paintReport(ctx, r, date, showPresent, draw) {
 
   // Mensagem geral
   const aus = totalAusencias(c);
-  const banner = postosOf(c) > 0 && aus === 0 ? "Sem faltas — todos os postos assegurados" : aus > 0 && c.sem === 0 ? "Todas as faltas foram repostas com backup" : "";
+  const pend = c.pend || 0;
+  const warn = pend > 0;
+  const banner = warn ? `${pend} colaborador${pend > 1 ? "es" : ""} por confirmar — ainda não ${pend > 1 ? "contam" : "conta"} como posto assegurado`
+    : postosOf(c) > 0 && aus === 0 ? "Sem faltas — todos os postos assegurados" : aus > 0 && c.sem === 0 ? "Todas as faltas foram repostas com backup" : "";
   if (banner) {
     if (draw) {
-      ctx.fillStyle = "#f0fdf4"; rrPath(ctx, P, y, IW, 42, 12); ctx.fill();
-      ctx.strokeStyle = "#bbf7d0"; ctx.lineWidth = 1; rrPath(ctx, P + 0.5, y + 0.5, IW - 1, 41, 12); ctx.stroke();
-      iconCheck(ctx, P + 22, y + 21, 12, "#15803d", 2.4);
+      ctx.fillStyle = warn ? "#fffbeb" : "#f0fdf4"; rrPath(ctx, P, y, IW, 42, 12); ctx.fill();
+      ctx.strokeStyle = warn ? "#fde68a" : "#bbf7d0"; ctx.lineWidth = 1; rrPath(ctx, P + 0.5, y + 0.5, IW - 1, 41, 12); ctx.stroke();
+      if (warn) { ctx.save(); ctx.fillStyle = "#b45309"; ctx.beginPath(); ctx.arc(P + 22, y + 21, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff"; ctx.font = RF(800, 11); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("!", P + 22, y + 21.5); ctx.restore(); }
+      else iconCheck(ctx, P + 22, y + 21, 12, "#15803d", 2.4);
     }
-    T(banner, P + 38, y + 21.5, RF(700, 14), "#15803d");
+    ctx.font = RF(700, 14);
+    T(fitText(ctx, banner, IW - 52), P + 38, y + 21.5, RF(700, 14), warn ? "#92400e" : "#15803d");
     y += 42 + 12;
   }
 
@@ -3291,7 +3303,7 @@ function paintReport(ctx, r, date, showPresent, draw) {
     const nm = fitText(ctx, s.nome, IW * 0.55);
     const nmW = ctx.measureText(nm).width;
     T(nm, P + 18, y + headH / 2, RF(800, 15.5), "#0f172a");
-    const meta = postosOf(s.c) ? `${fmtNum(postosOf(s.c) - s.c.semW)}/${postosOf(s.c)} postos assegurados` : "sem postos previstos";
+    const meta = postosOf(s.c) ? `${fmtNum(assuredOf(s.c))}/${postosOf(s.c)} postos assegurados` : "sem postos previstos";
     const metaW = M(meta, RF(600, 12.5));
     if (P + 18 + nmW + 12 + metaW < W - P - 18 - spW - 16) T(meta, P + 18 + nmW + 12, y + headH / 2 + 0.5, RF(600, 12.5), "#64748b");
     let ry = y + headH;
@@ -3494,8 +3506,23 @@ function CommandCenterView() {
   const activeClients = clients.filter((c) => c.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome));
   const activeIds = new Set(activeClients.map((c) => c.id));
   const recs = useMemo(() => data.recs.filter((r) => r.date >= from && r.date <= to && activeIds.has(r.clientId)), [data.recs, from, to, clients]);
-  const sums = useMemo(() => summarizeClients(recs, clients), [recs, clients]);
-  const total = useMemo(() => countRecs(recs), [recs]);
+  const pendByClient = useMemo(() => {
+    const m = new Map();
+    if (!ready || mode !== "dia") return m;
+    buildDayRoster({ iso: date, employees, stores, clients, cells: data.schedules[mkOfISO(date)] || {} })
+      .forEach((r) => { if (r.kind === "pending" && !r.isPool && r.client) m.set(r.client.id, (m.get(r.client.id) || 0) + 1); });
+    return m;
+  }, [ready, mode, date, data.schedules, employees, stores, clients]);
+  const sums = useMemo(() => {
+    const list = summarizeClients(recs, clients);
+    pendByClient.forEach((n, id) => {
+      let S = list.find((x) => x.id === id);
+      if (!S) { const cl = clients.find((x) => x.id === id); if (!cl) return; S = { id, nome: cl.nome, cor: cl.cor || "#64748b", c: emptyCounts(), abs: [], stores: [] }; list.push(S); }
+      S.c.pend = n;
+    });
+    return list;
+  }, [recs, clients, pendByClient]);
+  const total = useMemo(() => { const c = countRecs(recs); c.pend = [...pendByClient.values()].reduce((a, b) => a + b, 0); return c; }, [recs, pendByClient]);
   const pendingDay = useMemo(() => {
     if (!ready || mode !== "dia") return null;
     const rows = buildDayRoster({ iso: date, employees, stores, clients, cells: data.schedules[mkOfISO(date)] || {} });
@@ -3526,7 +3553,7 @@ function CommandCenterView() {
       {data.status === "loading" ? <Skeleton rows={5} /> : data.status === "error" ? <StateBox status="error" error={data.error} onRetry={data.reload} /> : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-            <Kpi label="Presença" value={p === null ? "—" : fmtPct(p)} sub="postos assegurados ÷ previstos" tone={presTone(total)} icon={ICONS.check} def="Só faltas sem reposição baixam a presença. Faltas repostas com backup interno ou externo contam como posto assegurado." />
+            <Kpi label="Presença" value={p === null ? "—" : fmtPct(p)} sub={total.pend ? `${total.pend} por confirmar contam como não assegurados` : "postos assegurados ÷ previstos"} tone={presTone(total)} icon={ICONS.check} def="Baixam a presença as faltas sem reposição e, no próprio dia, os colaboradores ainda por confirmar. Faltas repostas com backup interno ou externo contam como posto assegurado." />
             <Kpi label="Faltas" value={totalAusencias(total)} sub="colaboradores que faltaram" icon={ICONS.userX} />
             <Kpi label="Repostas com backup" value={totalRepostas(total)} sub={`${total.cInt} interno · ${total.cExt} externo`} tone="#0f766e" icon={ICONS.backup} />
             <Kpi label="Sem reposição" value={fmtNum(total.semW)} sub="ninguém foi colocado no lugar" tone={total.sem ? "#b91c1c" : "#15803d"} icon={ICONS.alert} />
@@ -3557,7 +3584,7 @@ function CommandCenterView() {
             <div className="cc-col cc-neutral">
               <div className="cc-head"><Icon path={ICONS.check} size={16} />Sem faltas<span>{okList.length}</span></div>
               {okList.length === 0 ? <div className="cc-empty">Todos os clientes com registos tiveram pelo menos uma falta.</div> : (
-                <div className="flex flex-wrap gap-1.5">{okList.map((s) => <button key={s.id} onClick={() => openCli(s.id)} className="cchip"><i style={{ background: s.cor }} />{s.nome}<span>{postosOf(s.c)} postos</span></button>)}</div>
+                <div className="flex flex-wrap gap-1.5">{okList.map((s) => <button key={s.id} onClick={() => openCli(s.id)} className="cchip"><i style={{ background: s.cor }} />{s.nome}<span className={s.c.pend ? "warn" : ""}>{s.c.pend ? `${s.c.pend} por confirmar` : `${postosOf(s.c)} postos`}</span></button>)}</div>
               )}
             </div>
           </div>
