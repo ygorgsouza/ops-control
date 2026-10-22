@@ -370,6 +370,35 @@
   .pick{display:block;width:100%;text-align:left;padding:8px 12px;border-bottom:1px solid var(--border-c);}
   .pick:last-child{border-bottom:none;} .pick:hover{background:var(--hover);} .pick.on{background:rgba(67,97,238,.1);}
   .pick b{display:block;font-size:13px;} .pick span{display:block;font-size:11px;color:var(--text-secondary);}
+  /* ---------------- Análises ---------------- */
+  .an-filters{background:var(--card-bg);border:1px solid var(--border-c);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);position:sticky;top:58px;z-index:20;}
+  .cchip-sm{height:26px;font-size:11.5px;padding:0 10px;}
+  .an-hero{border-top:4px solid;}
+  .delta{display:block;font-size:11px;font-weight:700;margin-top:6px;}
+  .delta.good{color:#15803d;} .delta.bad{color:#b91c1c;} .delta.muted{color:var(--text-secondary);font-weight:500;}
+  .an-note{font-size:11px;color:var(--text-secondary);margin-top:8px;}
+  .rank-row{display:block;width:100%;text-align:left;padding:9px 10px;border-radius:10px;font-size:13px;transition:background .15s;}
+  .rank-row:hover{background:var(--hover);}
+  .rank-bar{height:8px;border-radius:999px;background:var(--hover);margin-top:6px;overflow:hidden;}
+  .rank-bar > div{height:100%;border-radius:999px;transition:width .4s ease;}
+  .rank-meta{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .rank-meta .good{color:#15803d;font-weight:700;} .rank-meta .bad{color:#b91c1c;font-weight:700;}
+  .heat{border-collapse:separate;border-spacing:3px;font-size:11px;}
+  .heat th{font-size:10px;font-weight:700;color:var(--text-secondary);text-align:center;padding:0 0 2px;min-width:26px;line-height:1.15;}
+  .heat td{padding:0;}
+  .heat td button{width:100%;min-width:26px;height:26px;border-radius:6px;font-weight:800;font-size:11px;transition:transform .1s,box-shadow .1s;}
+  .heat td button:not(:disabled):hover{transform:scale(1.12);box-shadow:0 2px 8px rgba(0,0,0,.15);}
+  .heat-name{text-align:left !important;font-weight:700;font-size:12px;color:var(--text-primary);white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;padding-right:8px !important;position:sticky;left:0;background:var(--card-bg);z-index:1;}
+  .heat-legend{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-secondary);}
+  .heat-legend span{width:12px;height:12px;border-radius:3px;display:inline-block;margin-left:6px;}
+  .pill-n{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--hover);}
+  .pill-n.bad{background:#fee2e2;color:#b91c1c;}
+  .date-dot{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;}
+  .date-dot.ok{background:#ccfbf1;color:#0f766e;} .date-dot.bad{background:#fee2e2;color:#b91c1c;}
+  html.dark .pill-n.bad,html.dark .date-dot.bad{background:#3a1a1e;color:#fca5a5;} html.dark .date-dot.ok{background:#0c2b29;color:#5eead4;}
+  :root{--pf-1:#166534;--pf-2:#3f6212;--pf-3:#92400e;--pf-4:#991b1b;}
+  html.dark{--pf-1:#4ade80;--pf-2:#a3e635;--pf-3:#fbbf24;--pf-4:#f87171;}
+  html.dark .heat td button{color:#1f2937 !important;}
 </style>
 </head>
 <body>
@@ -3030,6 +3059,8 @@ function DailyRegisterView({ params }) {
                 <span className="w-1.5 h-6 rounded-full" style={{ background: g.cor }} />
                 <span className="font-extrabold text-sm">{g.nome}</span>
                 {!g.ativo && <span className="tag">Inativo</span>}
+                {g.id !== "_none" && <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); ops.editClient(ops.clients.find((c) => c.id === g.id)); }} className="icon-btn !w-7 !h-7" title="Editar cliente (nome, cor, ativo)"><Icon path={ICONS.edit} size={13} /></span>}
+                {g.id !== "_none" && <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); ops.editStore({ clienteId: g.id }); }} className="btn btn-ghost btn-xs" title="Criar nova loja neste cliente"><Icon path={ICONS.plus} size={12} />Loja</span>}
                 <span className="ml-auto text-xs text-[var(--text-secondary)]">{g.stores.reduce((a, s) => a + s.rows.length, 0)} colaboradores</span>
                 <span style={{ transform: closed[g.id] ? "rotate(-90deg)" : "none", display: "inline-flex" }}><Icon path={ICONS.chevronDown} size={16} /></span>
               </button>
@@ -3041,6 +3072,7 @@ function DailyRegisterView({ params }) {
                     <div className="store-head">
                       <span className="w-2 h-2 rounded-full" style={{ background: s.store.cor || "#9ca3af" }} />
                       <span className="font-bold text-[13px]">{s.store.nome}</span>
+                      <button onClick={() => ops.editStore(s.store)} className="icon-btn !w-6 !h-6" title="Editar loja (nome, cliente, tipo…)"><Icon path={ICONS.edit} size={12} /></button>
                       {s.store.tipo === "backup_pool" && <span className="tag tag-blue"><Icon path={ICONS.swap} size={10} />Backups</span>}
                       {s.store.horaChegada && (
                         <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] ml-2 whitespace-nowrap">
@@ -3719,116 +3751,268 @@ function AlertCenterView({ params }) {
 }
 
 /* ====================================================================== */
-/* ANÁLISES — por cliente, motoristas reincidentes, backups enviados       */
+/* ANÁLISES — filtros por cliente/loja/período, comparação, mapa de calor  */
 /* ====================================================================== */
+const AN_PERIODS = [["7d", "7 dias"], ["30d", "30 dias"], ["mes", "Este mês"], ["mesAnt", "Mês anterior"], ["custom", "Personalizado"]];
+function anRange(period, custom) {
+  const t = todayISO();
+  if (period === "7d") return [shiftISO(t, -6), t];
+  if (period === "30d") return [shiftISO(t, -29), t];
+  if (period === "mes") return [`${mkOfISO(t)}-01`, t];
+  if (period === "mesAnt") { const mk = shiftMonth(mkOfISO(t), -1); const [y, m] = mk.split("-").map(Number); return [`${mk}-01`, isoDate(y, m - 1, daysInMonth(y, m - 1))]; }
+  const a = custom.from || t, b = custom.to || t;
+  return a <= b ? [a, b > t ? t : b] : [b, a > t ? t : a];
+}
+const daysBetween = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 864e5) + 1;
+const presColor = (p) => (p === null ? null : p >= 99.95 ? "#16a34a" : p >= 97 ? "#84cc16" : p >= 93 ? "#f59e0b" : "#dc2626");
+const presBg = (p) => (p === null ? "var(--hover)" : p >= 99.95 ? "#dcfce7" : p >= 97 ? "#ecfccb" : p >= 93 ? "#fef3c7" : "#fee2e2");
+const presFg = (p) => (p === null ? "var(--text-secondary)" : p >= 99.95 ? "var(--pf-1)" : p >= 97 ? "var(--pf-2)" : p >= 93 ? "var(--pf-3)" : "var(--pf-4)");
+
+function Delta({ cur, prev, unit = "", inverse = false, pp = false, has }) {
+  if (!has || cur === null || prev === null || cur === undefined || prev === undefined) return <span className="delta muted">sem período anterior comparável</span>;
+  const d = Math.round((cur - prev) * 10) / 10;
+  if (d === 0) return <span className="delta muted">= período anterior</span>;
+  const good = inverse ? d < 0 : d > 0;
+  return <span className={`delta ${good ? "good" : "bad"}`}>{d > 0 ? "▲" : "▼"} {fmtNum(Math.abs(d))}{pp ? " pp" : unit} vs período anterior</span>;
+}
+
 function AnalysisView({ params }) {
   const ops = useOps();
   const { stores, employees, clients } = ops;
-  const curMk = ops.monthOptions[ops.monthOptions.length - 1];
-  const [period, setPeriod] = useState(curMk);
-  const [open, setOpen] = useState((params && params.clientId) || null);
+  const [period, setPeriod] = useState(() => { try { return localStorage.getItem("opsAnPeriod") || "30d"; } catch (e) { return "30d"; } });
+  const [custom, setCustom] = useState({ from: `${mkOfISO(todayISO())}-01`, to: todayISO() });
+  const [fClient, setFClient] = useState((params && params.clientId) || "");
+  const [fStore, setFStore] = useState("");
   const [minFaltas, setMinFaltas] = useState(2);
-  const t = todayISO();
-  const range = period === "7d" ? [shiftISO(t, -6), t] : period === "30d" ? [shiftISO(t, -29), t] : [`${period}-01`, isoDate(Number(period.slice(0, 4)), Number(period.slice(5)) - 1, daysInMonth(Number(period.slice(0, 4)), Number(period.slice(5)) - 1))];
-  const evoEnd = period.length === 7 ? period : curMk;
-  const months = useMemo(() => [...new Set([...monthWindow(evoEnd, 6), mkOfISO(range[0]), mkOfISO(range[1])])].sort(), [evoEnd, range[0], range[1]]);
+  const [drill, setDrill] = useState(null); // { title, recs }
+  const setP = (p) => { setPeriod(p); try { localStorage.setItem("opsAnPeriod", p); } catch (e) {} };
+  useEffect(() => { if (params && params.clientId) { setFClient(params.clientId); setFStore(""); } }, [params]);
+
+  const [from, to] = anRange(period, custom);
+  const len = daysBetween(from, to);
+  const pTo = shiftISO(from, -1), pFrom = shiftISO(from, -len);
+  const months = useMemo(() => { const out = []; let mk = mkOfISO(pFrom); const end = mkOfISO(to); while (mk <= end && out.length < 15) { out.push(mk); mk = shiftMonth(mk, 1); } return out; }, [pFrom, to]);
   const data = useOpsData({ months, stores, employees, clients, getScheduleForMonth: ops.getScheduleForMonth, enabled: ops.refsReady });
   const ready = data.status === "ready";
-  const inRange = useMemo(() => data.recs.filter((r) => r.date >= range[0] && r.date <= range[1] && r.date <= t), [data.recs, range[0], range[1]]);
-  const sums = useMemo(() => summarizeClients(inRange, clients).sort((a, b) => a.nome.localeCompare(b.nome)), [inRange, clients]);
-  const total = countRecs(inRange);
-  const periodLabel = period === "7d" ? "Últimos 7 dias" : period === "30d" ? "Últimos 30 dias" : monthLabelOf(period);
-  const reinc = useMemo(() => [...groupCount(inRange.filter(isAbsence), (r) => r.empId).values()].filter((e) => e.n >= minFaltas)
-    .map((e) => ({ ...e, sem: e.recs.filter((r) => r.cob === "sem").length, last: e.recs.map((r) => r.date).sort().pop() })).sort((a, b) => b.n - a.n || b.sem - a.sem), [inRange, minFaltas]);
-  const bkChart = useMemo(() => ({
-    labels: sums.map((s) => s.nome),
+  const t = todayISO();
+  const inScope = useCallback((r) => r.st !== "Pool" && (!fClient || (r.clientId || "_none") === fClient) && (!fStore || r.storeId === fStore), [fClient, fStore]);
+  const recs = useMemo(() => data.recs.filter((r) => r.date >= from && r.date <= to && r.date <= t && inScope(r)), [data.recs, from, to, inScope]);
+  const prevRecs = useMemo(() => data.recs.filter((r) => r.date >= pFrom && r.date <= pTo && inScope(r)), [data.recs, pFrom, pTo, inScope]);
+  const cur = useMemo(() => countRecs(recs), [recs]);
+  const prev = useMemo(() => countRecs(prevRecs), [prevRecs]);
+  const hasPrev = postosOf(prev) > 0;
+
+  const clientsWithData = useMemo(() => {
+    const ids = new Set(data.recs.filter((r) => r.date >= from && r.date <= to).map((r) => r.clientId || "_none"));
+    return clients.filter((c) => ids.has(c.id)).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [data.recs, from, to, clients]);
+  const storeOpts = stores.filter((s) => s.clienteId === fClient && s.tipo !== "backup_pool").sort((a, b) => a.nome.localeCompare(b.nome));
+  const selClient = clients.find((c) => c.id === fClient);
+  const selStore = stores.find((s) => s.id === fStore);
+  const scopeLabel = selStore ? `${selClient ? selClient.nome + " · " : ""}${selStore.nome}` : selClient ? selClient.nome : "Todos os clientes do software";
+  const periodLabel = `${fmtDMY(from)} – ${fmtDMY(to)}`;
+
+  // Série diária
+  const days = useMemo(() => Array.from({ length: Math.min(len, 400) }, (_, i) => shiftISO(from, i)).filter((d) => d <= t), [from, len]);
+  const byDay = useMemo(() => { const m = new Map(); recs.forEach((r) => { let c = m.get(r.date); if (!c) { c = emptyCounts(); m.set(r.date, c); } addRec(c, r); }); return m; }, [recs]);
+  const lineData = useMemo(() => ({
+    labels: days.map((d) => `${DIAS_SEMANA[parseISO(d).getDay()]} ${fmtDMY(d).slice(0, 5)}`),
+    datasets: [{ label: "Presença %", data: days.map((d) => (byDay.has(d) ? presencaPct(byDay.get(d)) : null)), borderColor: "#4361ee", backgroundColor: "rgba(67,97,238,.10)", fill: true, tension: 0.3, borderWidth: 2, pointRadius: days.length > 31 ? 0 : 3, pointHoverRadius: 5, spanGaps: false }],
+  }), [days, byDay]);
+  const minPres = Math.min(100, ...days.filter((d) => byDay.has(d)).map((d) => presencaPct(byDay.get(d)) ?? 100));
+  const lineOpts = { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => (c.parsed.y === null ? "Sem registos" : `Presença ${fmtPct(c.parsed.y)}`) } } }, scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10, font: { size: 10 } } }, y: { min: Math.max(0, Math.floor((minPres - 2) / 5) * 5), max: 100, ticks: { callback: (v) => v + "%" }, grid: { color: "rgba(148,163,184,.18)" } } } };
+  const barData = useMemo(() => ({
+    labels: lineData.labels,
     datasets: [
-      { label: "Backup interno", data: sums.map((s) => s.c.cInt), backgroundColor: "#0d9488", borderRadius: 4 },
-      { label: "Backup externo", data: sums.map((s) => s.c.cExt), backgroundColor: "#f59e0b", borderRadius: 4 },
-      { label: "Sem reposição", data: sums.map((s) => s.c.semW), backgroundColor: "#ef4444", borderRadius: 4 },
+      { label: "Repostas com backup", data: days.map((d) => (byDay.has(d) ? totalRepostas(byDay.get(d)) : null)), backgroundColor: "#14b8a6", borderRadius: 4, borderSkipped: "bottom", stack: "f" },
+      { label: "Sem reposição", data: days.map((d) => (byDay.has(d) ? byDay.get(d).semW : null)), backgroundColor: "#ef4444", borderRadius: 4, borderSkipped: "bottom", stack: "f" },
     ],
-  }), [sums]);
-  const evo = (cid) => {
-    const m6 = monthWindow(evoEnd, 6);
-    return { labels: m6.map(monthShort), datasets: [{ label: "Presença %", data: m6.map((mk) => { if (!data.monthHasData[mk]) return null; const c = countRecs(data.recs.filter((r) => r.mk === mk && (r.clientId || "_none") === cid && r.date <= t)); return presencaPct(c); }), borderColor: "#4361ee", backgroundColor: "rgba(67,97,238,.12)", fill: true, tension: 0.3, pointRadius: 3, spanGaps: false }] };
+  }), [days, byDay, lineData.labels]);
+  const barOpts = { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } }, scales: { x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10, font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: "rgba(148,163,184,.18)" } } } };
+
+  // Ranking (clientes, ou lojas quando há cliente selecionado)
+  const groupKey = fClient ? (r) => r.storeId || "_none" : (r) => r.clientId || "_none";
+  const groupName = (r) => (fClient ? r.store : r.client);
+  const ranking = useMemo(() => {
+    const m = new Map(), pm = new Map();
+    recs.forEach((r) => { const k = groupKey(r); let e = m.get(k); if (!e) { e = { k, nome: groupName(r), cor: fClient ? (stores.find((s) => s.id === r.storeId) || {}).cor || r.clientCor : r.clientCor, c: emptyCounts(), recs: [] }; m.set(k, e); } addRec(e.c, r); e.recs.push(r); });
+    prevRecs.forEach((r) => { const k = groupKey(r); let c = pm.get(k); if (!c) { c = emptyCounts(); pm.set(k, c); } addRec(c, r); });
+    return [...m.values()].filter((e) => postosOf(e.c) > 0).map((e) => ({ ...e, p: presencaPct(e.c), pp: pm.has(e.k) && postosOf(pm.get(e.k)) ? presencaPct(pm.get(e.k)) : null }))
+      .sort((a, b) => a.p - b.p || b.c.semW - a.c.semW || a.nome.localeCompare(b.nome));
+  }, [recs, prevRecs, fClient]);
+
+  const rankFloor = Math.max(0, Math.min(90, Math.floor(Math.min(100, ...ranking.map((e) => e.p)) / 5) * 5 - 5));
+  // Mapa de calor: linhas = clientes/lojas, colunas = dias (ou semanas se > 35 dias)
+  const weekly = days.length > 35;
+  const cols = useMemo(() => {
+    if (!weekly) return days.map((d) => ({ key: d, from: d, to: d, label: fmtDMY(d).slice(0, 2), sub: DIAS_SEMANA[parseISO(d).getDay()].slice(0, 1) }));
+    const out = []; let i = 0;
+    while (i < days.length) { const a = days[i], b = days[Math.min(i + 6, days.length - 1)]; out.push({ key: a, from: a, to: b, label: fmtDMY(a).slice(0, 5), sub: "sem." }); i += 7; }
+    return out;
+  }, [days, weekly]);
+  const heat = useMemo(() => ranking.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map((e) => ({
+    ...e, cells: cols.map((col) => { const rr = e.recs.filter((r) => r.date >= col.from && r.date <= col.to); const c = countRecs(rr); return { col, c, p: postosOf(c) ? presencaPct(c) : null, rr }; }),
+  })), [ranking, cols]);
+
+  // Reincidência e dia da semana
+  const reinc = useMemo(() => [...groupCount(recs.filter(isAbsence), (r) => r.empId).values()].filter((e) => e.n >= minFaltas)
+    .map((e) => ({ ...e, sem: e.recs.filter((r) => r.cob === "sem").length })).sort((a, b) => b.n - a.n || b.sem - a.sem).slice(0, 25), [recs, minFaltas]);
+  const dow = useMemo(() => { const a = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ d, rep: 0, sem: 0 })); recs.filter(isAbsence).forEach((r) => { const x = a.find((y) => y.d === r.dow); if (r.cob === "sem") x.sem++; else x.rep++; }); return a; }, [recs]);
+  const dowMax = Math.max(1, ...dow.map((x) => x.rep + x.sem));
+
+  const absRecs = recs.filter(isAbsence);
+  const openDrill = (title, list) => setDrill({ title, recs: list.filter(isAbsence) });
+  const exportAll = async () => {
+    try {
+      await exportXlsx(`analise-presencas-${from}_${to}.xlsx`, [
+        { name: "Critérios", rows: [{ Campo: "Âmbito", Valor: scopeLabel }, { Campo: "Período", Valor: periodLabel }, { Campo: "Período anterior", Valor: `${fmtDMY(pFrom)} – ${fmtDMY(pTo)}` }, { Campo: "Regra", Valor: "Presença = (postos − faltas sem reposição) ÷ postos. Faltas com backup não baixam a presença." }] },
+        { name: fClient ? "Por loja" : "Por cliente", rows: ranking.map((e) => ({ [fClient ? "Loja" : "Cliente"]: e.nome, "Presença %": e.p, "Presença período anterior %": e.pp ?? "", Postos: postosOf(e.c), Faltas: totalAusencias(e.c), "Backup interno": e.c.cInt, "Backup externo": e.c.cExt, "Sem reposição": e.c.semW })) },
+        { name: "Por dia", rows: days.filter((d) => byDay.has(d)).map((d) => { const c = byDay.get(d); return { Data: fmtDMY(d), "Presença %": presencaPct(c), Postos: postosOf(c), Faltas: totalAusencias(c), "Com backup": totalRepostas(c), "Sem reposição": c.semW }; }) },
+        { name: "Reincidentes", rows: reinc.map((e) => ({ Motorista: e.recs[0].emp, Cliente: e.recs[0].client, Loja: e.recs[0].store, Faltas: e.n, "Sem reposição": e.sem, Datas: listDates(e.recs) })) },
+        { name: "Faltas", rows: absRecs.map(recToRow) },
+      ]);
+    } catch (e) { ops.toast("error", String(e.message || e)); }
   };
-  const evoOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { suggestedMin: 90, max: 100, ticks: { callback: (v) => v + "%" } }, x: { grid: { display: false } } } };
 
   return (
     <div className="page fade-in">
-      <PageHeader eyebrow="Direção" title="Análises" subtitle={`Presença, faltas e backups por cliente · ${periodLabel}`}
-        right={<select value={period} onChange={(e) => setPeriod(e.target.value)} className="input w-auto">
-          <optgroup label="Período"><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option></optgroup>
-          <optgroup label="Mês">{[...ops.monthOptions].reverse().map((mk) => <option key={mk} value={mk}>{monthLabelOf(mk)}</option>)}</optgroup>
-        </select>} />
-      {!ready ? <StateBox status={data.status} error={data.error} onRetry={data.reload} /> : (
+      <PageHeader eyebrow="Direção" title="Análises" subtitle={`${scopeLabel} · ${periodLabel}`}
+        right={<button onClick={exportAll} disabled={!ready} className="btn btn-ghost"><Icon path={ICONS.download} size={15} />Exportar Excel</button>} />
+
+      <div className="an-filters mb-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Seg value={period} onChange={setP} size="sm" options={AN_PERIODS} />
+          {period === "custom" && <>
+            <input type="date" value={custom.from} max={t} onChange={(e) => e.target.value && setCustom({ ...custom, from: e.target.value })} className="input input-sm w-auto" />
+            <span className="text-xs text-[var(--text-secondary)]">a</span>
+            <input type="date" value={custom.to} max={t} onChange={(e) => e.target.value && setCustom({ ...custom, to: e.target.value })} className="input input-sm w-auto" />
+          </>}
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar mt-3">
+          <button onClick={() => { setFClient(""); setFStore(""); }} className={`cchip ${!fClient ? "on" : ""}`}>Todos os clientes</button>
+          {clientsWithData.map((c) => <button key={c.id} onClick={() => { setFClient(fClient === c.id ? "" : c.id); setFStore(""); }} className={`cchip ${fClient === c.id ? "on" : ""}`}><i style={{ background: c.cor }} />{c.nome}</button>)}
+        </div>
+        {fClient && storeOpts.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar mt-2">
+            <button onClick={() => setFStore("")} className={`cchip cchip-sm ${!fStore ? "on" : ""}`}>Todas as lojas</button>
+            {storeOpts.map((s) => <button key={s.id} onClick={() => setFStore(fStore === s.id ? "" : s.id)} className={`cchip cchip-sm ${fStore === s.id ? "on" : ""}`}>{s.nome}</button>)}
+          </div>
+        )}
+      </div>
+
+      {!ready ? <StateBox status={data.status} error={data.error} onRetry={data.reload} /> : postosOf(cur) === 0 ? (
+        <div className="card"><EmptyState icon={ICONS.analytics} title="Sem registos neste período" text="Escolhe outro período ou cliente." /></div>
+      ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <Kpi label="Presença" value={fmtPct(presencaPct(total))} sub="todos os clientes do software" tone={presTone(total)} />
-            <Kpi label="Faltas" value={totalAusencias(total)} sub={`${postosOf(total)} postos previstos`} />
-            <Kpi label="Backups enviados" value={totalRepostas(total)} sub={`${total.cInt} interno · ${total.cExt} externo`} tone="#0f766e" />
-            <Kpi label="Sem reposição" value={fmtNum(total.semW)} sub="faltas que baixaram a presença" tone={total.sem ? "#b91c1c" : "#15803d"} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            <div className="kpi an-hero" style={{ borderTopColor: presColor(presencaPct(cur)) }}>
+              <span className="kpi-label">Presença</span>
+              <div className="kpi-value" style={{ color: presFg(presencaPct(cur)) }}>{fmtPct(presencaPct(cur))}</div>
+              <div className="kpi-sub">{fmtNum(assuredOf(cur))} de {postosOf(cur)} postos assegurados</div>
+              <Delta cur={presencaPct(cur)} prev={hasPrev ? presencaPct(prev) : null} pp has={hasPrev} />
+            </div>
+            <button className="kpi kpi-click text-left" onClick={() => openDrill("Todas as faltas", absRecs)}>
+              <span className="kpi-label">Faltas</span>
+              <div className="kpi-value">{totalAusencias(cur)}</div>
+              <div className="kpi-sub">{postosOf(cur) ? fmtPct(pct1(totalAusencias(cur), postosOf(cur))) : "—"} dos postos</div>
+              <Delta cur={totalAusencias(cur)} prev={totalAusencias(prev)} inverse has={hasPrev} />
+            </button>
+            <button className="kpi kpi-click text-left" onClick={() => openDrill("Faltas repostas com backup", absRecs.filter((r) => r.cob !== "sem"))}>
+              <span className="kpi-label">Repostas com backup</span>
+              <div className="kpi-value" style={{ color: "#0f766e" }}>{totalRepostas(cur)}</div>
+              <div className="kpi-sub">{cur.cInt} interno · {cur.cExt} externo{totalAusencias(cur) ? ` · ${fmtPct(pct1(totalRepostas(cur), totalAusencias(cur)))} das faltas` : ""}</div>
+              <Delta cur={totalRepostas(cur)} prev={totalRepostas(prev)} has={hasPrev} />
+            </button>
+            <button className="kpi kpi-click text-left" onClick={() => openDrill("Faltas sem reposição", absRecs.filter((r) => r.cob === "sem"))}>
+              <span className="kpi-label">Sem reposição</span>
+              <div className="kpi-value" style={{ color: cur.sem ? "#b91c1c" : "#15803d" }}>{fmtNum(cur.semW)}</div>
+              <div className="kpi-sub">as únicas que baixam a presença</div>
+              <Delta cur={cur.semW} prev={prev.semW} inverse has={hasPrev} />
+            </button>
           </div>
 
-          <Card title="Por cliente" className="mb-5" right={<span className="text-[11px] text-[var(--text-secondary)]">Clique num cliente para ver lojas, faltas e evolução</span>}>
-            {sums.length === 0 ? <EmptyState title="Sem registos no período" /> : (
-              <div className="overflow-x-auto -mx-1"><table className="tbl min-w-[760px]">
-                <thead><tr><th>Cliente</th><th className="num">Presença</th><th className="num">Postos</th><th className="num">Faltas</th><th className="num">Com backup interno</th><th className="num">Com backup externo</th><th className="num">Sem reposição</th></tr></thead>
-                <tbody>{sums.map((s) => (
-                  <React.Fragment key={s.id}>
-                    <tr className={`clickable ${open === s.id ? "sel" : ""}`} onClick={() => setOpen(open === s.id ? null : s.id)}>
-                      <td><span className="inline-flex items-center gap-2 font-bold"><span style={{ display: "inline-flex", transform: open === s.id ? "none" : "rotate(-90deg)" }}><Icon path={ICONS.chevronDown} size={13} /></span><span className="w-2 h-2 rounded-full" style={{ background: s.cor }} />{s.nome}</span></td>
-                      <td className="num font-extrabold" style={{ color: presTone(s.c) }}>{fmtPct(presencaPct(s.c))}</td>
-                      <td className="num">{postosOf(s.c)}</td><td className="num">{totalAusencias(s.c)}</td>
-                      <td className="num">{s.c.cInt}</td><td className="num">{s.c.cExt}</td>
-                      <td className="num" style={s.c.sem ? { color: "#b91c1c", fontWeight: 800 } : {}}>{fmtNum(s.c.semW)}</td>
-                    </tr>
-                    {open === s.id && (
-                      <tr><td colSpan={7} className="bg-[var(--hover)]">
-                        <div className="grid lg:grid-cols-2 gap-5 py-2">
-                          <div>
-                            <div className="section-label">Lojas</div>
-                            <table className="tbl"><thead><tr><th>Loja</th><th className="num">Presença</th><th className="num">Faltas</th><th className="num">Backups</th><th className="num">Sem rep.</th></tr></thead>
-                              <tbody>{s.stores.map((x) => <tr key={x.id}><td className="font-semibold">{x.nome}</td><td className="num font-bold" style={{ color: presTone(x.c) }}>{fmtPct(presencaPct(x.c))}</td><td className="num">{totalAusencias(x.c)}</td><td className="num">{totalRepostas(x.c)}</td><td className="num" style={x.c.sem ? { color: "#b91c1c", fontWeight: 700 } : {}}>{fmtNum(x.c.semW)}</td></tr>)}</tbody></table>
-                          </div>
-                          <div>
-                            <div className="section-label">Presença mensal (6 meses)</div>
-                            <ChartCanvas type="line" data={evo(s.id)} options={evoOpts} height={180} />
-                          </div>
-                        </div>
-                        <div className="section-label mt-3">Faltas no período ({s.abs.length})</div>
-                        <OccurrenceTable items={s.abs} maxH={280} />
-                      </td></tr>
-                    )}
-                  </React.Fragment>
-                ))}</tbody>
-              </table></div>
-            )}
-          </Card>
+          <div className="grid xl:grid-cols-2 gap-5 mb-5">
+            <Card title="Presença por dia"><ChartCanvas type="line" data={lineData} options={lineOpts} height={230} /><p className="an-note">Dias sem registos ficam em branco (não contam como 0%).</p></Card>
+            <Card title="Faltas por dia"><ChartCanvas type="bar" data={barData} options={barOpts} height={230} /></Card>
+          </div>
 
-          <div className="grid xl:grid-cols-2 gap-5">
-            <Card title="Motoristas com reincidência" right={<label className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">Mínimo de faltas<select value={minFaltas} onChange={(e) => setMinFaltas(Number(e.target.value))} className="input input-xs w-14">{[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>}>
-              {reinc.length === 0 ? <EmptyState icon={ICONS.check} title="Ninguém acima do mínimo" text={`Nenhum motorista com ${minFaltas} ou mais faltas no período.`} /> : (
-                <div className="overflow-x-auto -mx-1"><table className="tbl min-w-[520px]">
-                  <thead><tr><th>Motorista</th><th>Cliente · Loja</th><th className="num">Faltas</th><th className="num">Sem rep.</th><th>Datas</th></tr></thead>
-                  <tbody>{reinc.map((e) => (
-                    <tr key={e.k} className="clickable" onClick={() => ops.openEmployee(e.k)}>
-                      <td className="font-semibold">{e.recs[0].emp}</td>
-                      <td className="text-xs text-[var(--text-secondary)]">{e.recs[0].client} · {e.recs[0].store}</td>
-                      <td className="num font-extrabold">{e.n}</td>
-                      <td className="num" style={e.sem ? { color: "#b91c1c", fontWeight: 700 } : {}}>{e.sem}</td>
-                      <td className="text-xs">{listDates(e.recs)}</td>
+          <div className="grid xl:grid-cols-5 gap-5 mb-5">
+            <Card title={fClient ? "Presença por loja" : "Presença por cliente"} className="xl:col-span-2" right={<span className="text-[11px] text-[var(--text-secondary)]">{fClient ? "Clique para ver as faltas" : "Clique para filtrar"}</span>}>
+              <div className="flex justify-between text-[10px] text-[var(--text-secondary)] px-2.5 mb-1"><span>Escala de {rankFloor}% a 100%</span><span>pior → melhor</span></div>
+              <div className="space-y-1">
+                {ranking.map((e) => (
+                  <button key={e.k} onClick={() => (fClient ? openDrill(`${e.nome} · faltas`, e.recs) : (setFClient(e.k), setFStore("")))} className="rank-row">
+                    <div className="flex items-center gap-2 min-w-0"><span className="w-2 h-2 rounded-full shrink-0" style={{ background: e.cor }} /><span className="font-semibold truncate">{e.nome}</span>
+                      <span className="ml-auto font-extrabold tabular-nums" style={{ color: presFg(e.p) }}>{fmtPct(e.p)}</span></div>
+                    <div className="rank-bar"><div style={{ width: `${Math.max(2, ((e.p - rankFloor) / (100 - rankFloor)) * 100)}%`, background: presColor(e.p) }} /></div>
+                    <div className="rank-meta">{postosOf(e.c)} postos · {totalAusencias(e.c)} faltas · {totalRepostas(e.c)} c/ backup · <b style={{ color: e.c.sem ? "#b91c1c" : undefined }}>{fmtNum(e.c.semW)} sem reposição</b>
+                      {e.pp !== null && <span className={e.p - e.pp > 0 ? "good" : e.p - e.pp < 0 ? "bad" : ""}> · {e.p === e.pp ? "=" : (e.p > e.pp ? "▲ " : "▼ ") + fmtNum(Math.abs(Math.round((e.p - e.pp) * 10) / 10)) + " pp"}</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+            <Card title={`Mapa de presença · ${weekly ? "por semana" : "por dia"}`} className="xl:col-span-3" right={<div className="heat-legend"><span style={{ background: "#dcfce7" }} />100%<span style={{ background: "#ecfccb" }} />≥97%<span style={{ background: "#fef3c7" }} />≥93%<span style={{ background: "#fee2e2" }} />&lt;93%</div>}>
+              <div className="overflow-x-auto">
+                <table className="heat">
+                  <thead><tr><th className="heat-name"></th>{cols.map((c) => <th key={c.key}><div>{c.label}</div><div className="opacity-60">{c.sub}</div></th>)}</tr></thead>
+                  <tbody>{heat.map((h) => (
+                    <tr key={h.k}><td className="heat-name" title={h.nome}>{h.nome}</td>
+                      {h.cells.map((cell) => (
+                        <td key={cell.col.key}>
+                          <button disabled={cell.p === null} onClick={() => openDrill(`${h.nome} · ${weekly ? `semana de ${fmtDMY(cell.col.from)}` : fmtDMY(cell.col.from)}`, cell.rr)}
+                            title={cell.p === null ? "Sem registos" : `${fmtPct(cell.p)} · ${postosOf(cell.c)} postos · ${totalAusencias(cell.c)} faltas · ${fmtNum(cell.c.semW)} sem reposição`}
+                            style={{ background: presBg(cell.p), color: presFg(cell.p) }}>{cell.p === null ? "" : cell.c.sem ? fmtNum(cell.c.semW) : totalAusencias(cell.c) ? "✓" : ""}</button>
+                        </td>
+                      ))}
                     </tr>
                   ))}</tbody>
-                </table></div>
+                </table>
+              </div>
+              <p className="an-note">Número na célula = faltas sem reposição · ✓ = houve faltas, todas repostas · vazio = sem faltas. Clique numa célula para ver os registos.</p>
+            </Card>
+          </div>
+
+          <div className="grid xl:grid-cols-5 gap-5">
+            <Card title="Motoristas que mais faltam" className="xl:col-span-3" right={<label className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)] whitespace-nowrap">a partir de<select value={minFaltas} onChange={(e) => setMinFaltas(Number(e.target.value))} className="input input-xs w-14">{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}</select>falta(s)</label>}>
+              {reinc.length === 0 ? <EmptyState icon={ICONS.check} title="Ninguém acima do mínimo" text={`Nenhum motorista com ${minFaltas} ou mais faltas neste período.`} /> : (
+                <div className="space-y-1">
+                  {reinc.map((e) => (
+                    <button key={e.k} onClick={() => ops.openEmployee(e.k)} className="rank-row">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-semibold truncate">{e.recs[0].emp}</span>
+                        <span className="text-[11px] text-[var(--text-secondary)] truncate">{e.recs[0].client} · {e.recs[0].store}</span>
+                        <span className="ml-auto flex items-center gap-1.5 shrink-0"><span className="pill-n">{e.n} falta{e.n > 1 ? "s" : ""}</span>{e.sem > 0 && <span className="pill-n bad">{e.sem} sem rep.</span>}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1.5">{e.recs.slice().sort((a, b) => a.date.localeCompare(b.date)).map((r, i) => <span key={i} className={`date-dot ${r.cob === "sem" ? "bad" : "ok"}`} title={`${absLabel(r)} · ${covLabel(r) || "—"}`}>{fmtDMY(r.date).slice(0, 5)}</span>)}</div>
+                    </button>
+                  ))}
+                </div>
               )}
             </Card>
-            <Card title="Backups enviados por cliente">
-              {sums.length === 0 ? <EmptyState title="Sem dados" /> : <ChartCanvas type="bar" data={bkChart} options={barStackOpts} height={Math.max(220, sums.length * 34)} />}
-              <p className="text-[11px] text-[var(--text-secondary)] mt-2">Cada falta reposta conta como um backup enviado (interno inclui colaboradores de backup enviados nesse dia para a loja).</p>
+            <Card title="Faltas por dia da semana" className="xl:col-span-2">
+              <div className="space-y-2.5">
+                {dow.map((x) => (
+                  <div key={x.d} className="flex items-center gap-3">
+                    <span className="w-9 text-xs font-bold text-[var(--text-secondary)]">{DIAS_SEMANA[x.d]}</span>
+                    <div className="flex-1 flex h-5 rounded-md overflow-hidden bg-[var(--hover)]" title={`${x.rep} com backup · ${x.sem} sem reposição`}>
+                      {x.rep > 0 && <div style={{ width: `${(x.rep / dowMax) * 100}%`, background: "#14b8a6" }} />}
+                      {x.sem > 0 && <div style={{ width: `${(x.sem / dowMax) * 100}%`, background: "#ef4444", marginLeft: x.rep ? 2 : 0 }} />}
+                    </div>
+                    <span className="w-14 text-right text-xs tabular-nums"><b>{x.rep + x.sem}</b>{x.sem ? <span className="text-red-600"> · {x.sem}</span> : ""}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-4 mt-4 text-[11px] text-[var(--text-secondary)]"><span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm" style={{ background: "#14b8a6" }} />Com backup</span><span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-sm" style={{ background: "#ef4444" }} />Sem reposição</span></div>
             </Card>
           </div>
         </>
+      )}
+
+      {drill && (
+        <Drawer title={drill.title} subtitle={`${scopeLabel} · ${periodLabel} · ${drill.recs.length} falta(s)`} onClose={() => setDrill(null)}>
+          {drill.recs.length ? <OccurrenceTable items={drill.recs.slice().sort((a, b) => b.date.localeCompare(a.date))} maxH={9999} /> : <EmptyState icon={ICONS.check} title="Sem faltas" />}
+        </Drawer>
       )}
     </div>
   );
@@ -3943,7 +4127,7 @@ function ClientsPane({ params }) {
                 <div className="h-1" style={{ background: c.cor }} />
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-2 mb-4">
-                    <div className="min-w-0"><div className="font-extrabold truncate">{c.nome}</div><div className="text-[11px] text-[var(--text-secondary)]">{cs.length} loja(s) · {emps.length} colaborador(es) ativo(s)</div></div>
+                    <div className="min-w-0"><div className="font-extrabold truncate flex items-center gap-1.5">{c.nome}<span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); ops.editClient(c); }} className="icon-btn !w-6 !h-6" title="Editar cliente"><Icon path={ICONS.edit} size={12} /></span></div><div className="text-[11px] text-[var(--text-secondary)]">{cs.length} loja(s) · {emps.length} colaborador(es) ativo(s)</div></div>
                     <div className="flex flex-col items-end gap-1">
                       {c.ativo === false ? <span className="tag">Inativo</span> : <span className="tag tag-green">Ativo</span>}
                       {al.length > 0 && <span className="tag" style={{ color: PRIO[al[0].sev].color, background: PRIO[al[0].sev].color + "14" }}>{al.length} alerta(s)</span>}
@@ -3977,7 +4161,7 @@ function ClientDrawer({ client, mk, data, onClose, onEdit, onToggle, onDelete })
   const occ = recs.filter((r) => r.mk === mk && isAbsence(r));
   return (
     <Drawer title={client.nome} subtitle={`${client.ativo === false ? "Inativo" : "Ativo"} · ${cs.length} loja(s)`} onClose={onClose}
-      actions={<><button onClick={onEdit} className="btn btn-ghost btn-sm"><Icon path={ICONS.edit} size={13} />Editar</button><button onClick={onToggle} className="btn btn-ghost btn-sm"><Icon path={ICONS.power} size={13} />{client.ativo === false ? "Reativar" : "Desativar"}</button><button onClick={onDelete} className="icon-btn text-red-500" title="Eliminar"><Icon path={ICONS.trash} size={15} /></button></>}>
+      actions={<><button onClick={() => ops.editClient(client)} className="btn btn-ghost btn-sm"><Icon path={ICONS.edit} size={13} />Editar</button><button onClick={onToggle} className="btn btn-ghost btn-sm"><Icon path={ICONS.power} size={13} />{client.ativo === false ? "Reativar" : "Desativar"}</button><button onClick={onDelete} className="icon-btn text-red-500" title="Eliminar"><Icon path={ICONS.trash} size={15} /></button></>}>
       <div className="flex gap-2 flex-wrap mb-5">
         <button onClick={() => { onClose(); ops.nav("report", { date: t, clientId: client.id }); }} className="btn btn-primary btn-sm"><Icon path={ICONS.layers} size={14} />Relatório de hoje</button>
         <button onClick={() => { onClose(); ops.nav("daily", { date: t, clientId: client.id }); }} className="btn btn-ghost btn-sm"><Icon path={ICONS.calendarCheck} size={14} />Registo de hoje</button>
@@ -3989,12 +4173,12 @@ function ClientDrawer({ client, mk, data, onClose, onEdit, onToggle, onDelete })
         <tbody>{months.map((m) => { const c = countRecs(recs.filter((r) => r.mk === m)); const b = postosOf(c); const has = data.monthHasData[m]; return (
           <tr key={m}><td className="font-semibold">{monthLabelOf(m)}</td>{has ? <><td className="num">{b}</td><td className="num font-bold" style={{ color: presTone(c) }}>{fmtPct(presencaPct(c))}</td><td className="num">{totalAusencias(c)}</td><td className="num">{c.cInt}</td><td className="num">{c.cExt}</td><td className="num" style={c.sem ? { color: "#b91c1c", fontWeight: 700 } : {}}>{fmtNum(c.semW)}</td></> : <td colSpan={6} className="text-center text-[var(--text-secondary)] text-xs">Sem dados na grelha</td>}</tr>
         ); })}</tbody></table></div>
-      <div className="section-label">Lojas e colaboradores ativos</div>
+      <div className="flex items-center justify-between mb-2"><div className="section-label !mb-0">Lojas e colaboradores ativos</div><button onClick={() => ops.editStore({ clienteId: client.id })} className="btn btn-ghost btn-xs"><Icon path={ICONS.plus} size={12} />Nova loja</button></div>
       <div className="space-y-2 mb-6">
         {cs.length === 0 && <div className="text-xs text-[var(--text-secondary)]">Sem lojas associadas.</div>}
         {cs.map((s) => { const emps = ops.employees.filter((e) => e.lojaId === s.id && empActiveOn(e, t)).sort((a, b) => a.nome.localeCompare(b.nome)); const sc = countRecs(recs.filter((r) => r.storeId === s.id && r.mk === mk)); return (
           <details key={s.id} className="det">
-            <summary><span className="w-2 h-2 rounded-full" style={{ background: s.cor }} /><span className="font-semibold">{s.nome}</span>{s.tipo === "backup_pool" && <span className="tag tag-blue">Pool</span>}<span className="ml-auto text-xs text-[var(--text-secondary)]">{emps.length} colab. · {fmtPct(presencaPct(sc))} · {totalAusencias(sc)} faltas · {fmtNum(sc.semW)} s/rep.</span></summary>
+            <summary><span className="w-2 h-2 rounded-full" style={{ background: s.cor }} /><span className="font-semibold">{s.nome}</span><span role="button" tabIndex={0} onClick={(e) => { e.preventDefault(); ops.editStore(s); }} className="icon-btn !w-6 !h-6" title="Editar loja"><Icon path={ICONS.edit} size={12} /></span>{s.tipo === "backup_pool" && <span className="tag tag-blue">Pool</span>}<span className="ml-auto text-xs text-[var(--text-secondary)]">{emps.length} colab. · {fmtPct(presencaPct(sc))} · {totalAusencias(sc)} faltas · {fmtNum(sc.semW)} s/rep.</span></summary>
             <div className="flex flex-wrap gap-1.5 pt-2">{emps.map((e) => <button key={e.id} onClick={() => ops.openEmployee(e.id)} className="fchip">{e.nome}</button>)}{!emps.length && <span className="text-xs text-[var(--text-secondary)]">Sem colaboradores ativos.</span>}</div>
           </details>
         ); })}
@@ -5429,6 +5613,7 @@ function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [empDrawer, setEmpDrawer] = useState(null);
+  const [editEntity, setEditEntity] = useState(null); // { kind: "store"|"client", data }
   const [toasts, setToasts] = useState([]);
   const [stores, setStores] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -5669,6 +5854,40 @@ function App() {
     } catch (e) { toast("error", friendlyErr(e, "registar a saída")); return false; }
   }, [changeStatus, toast]);
 
+  // Clientes e lojas: edição a partir de qualquer ecrã (nomes, cliente da loja, tipo, coluna de chegada, ativo…).
+  // Os registos guardam IDs, por isso mudar nomes nunca altera o histórico.
+  const saveStore = useCallback(async (data) => {
+    const nome = String(data.nome || "").trim();
+    if (!nome) return false;
+    const dup = storesRef.current.find((x) => x.id !== data.id && normTxt(x.nome) === normTxt(nome) && (x.clienteId || "") === (data.clienteId || ""));
+    if (dup) { toast("error", `Já existe a loja “${dup.nome}” neste cliente.`); return false; }
+    const prev = data.id ? storesRef.current.find((x) => x.id === data.id) : null;
+    const cName = (id) => (clients.find((c) => c.id === id) || {}).nome || "sem cliente";
+    try {
+      const payload = { ...data, nome };
+      if (data.id) await col("stores").doc(data.id).set(payload, { merge: true });
+      else await col("stores").add({ ...payload, ordem: storesRef.current.length, criadoEm: Date.now() });
+      logHistory(data.id ? "Editou" : "Criou", "Loja", nome, prev && prev.nome !== nome ? `Renomeada (antes: ${prev.nome}) · Cliente: ${cName(payload.clienteId)}` : `Cliente: ${cName(payload.clienteId)}`);
+      toast("success", `Loja “${nome}” guardada.`);
+      return true;
+    } catch (e) { toast("error", friendlyErr(e, "guardar a loja")); return false; }
+  }, [clients, toast]);
+  const saveClient = useCallback(async (data) => {
+    const nome = String(data.nome || "").trim();
+    if (!nome) return false;
+    const dup = clients.find((c) => c.id !== data.id && normTxt(c.nome) === normTxt(nome));
+    if (dup) { toast("error", `Já existe um cliente chamado “${dup.nome}”.`); return false; }
+    const prev = data.id ? clients.find((c) => c.id === data.id) : null;
+    try {
+      const payload = { ...data, nome };
+      if (data.id) await col("clients").doc(data.id).set(payload, { merge: true });
+      else await col("clients").add({ ...payload, criadoEm: Date.now() });
+      logHistory(data.id ? "Editou" : "Criou", "Cliente", nome, prev && prev.nome !== nome ? `Renomeado (antes: ${prev.nome})` : payload.ativo === false ? "Inativo" : "Ativo");
+      toast("success", `Cliente “${nome}” guardado.`);
+      return true;
+    } catch (e) { toast("error", friendlyErr(e, "guardar o cliente")); return false; }
+  }, [clients, toast]);
+
   const monthOptions = useMemo(() => {
     const now = new Date(); const arr = [];
     for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); arr.push(monthKey(d.getFullYear(), d.getMonth())); }
@@ -5735,7 +5954,8 @@ function App() {
 
   const ops = {
     user, stores, employees, clients, refsReady, version, monthOptions,
-    getScheduleForMonth, peekSchedule, getMonthDoc, changeStatus, bulkSet, saveNote, saveArrivalTime, saveEmployee, swapDriver, registerExit,
+    getScheduleForMonth, peekSchedule, getMonthDoc, changeStatus, bulkSet, saveNote, saveArrivalTime, saveEmployee, swapDriver, registerExit, saveStore, saveClient,
+    editStore: (data) => setEditEntity({ kind: "store", data: data || null }), editClient: (data) => setEditEntity({ kind: "client", data: data || null }),
     nav, toast, openEmployee: (id) => setEmpDrawer(id),
     alerts, alertsStatus: engine.status, alertState, isUnread, markRead, toggleFollow,
     cfg, setCfg, dark, toggleDark, sync,
@@ -5765,6 +5985,8 @@ function App() {
       </div>
       {empDrawer && <EmployeeDrawer key={empDrawer} empId={empDrawer} onClose={() => setEmpDrawer(null)} />}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+      {editEntity && editEntity.kind === "store" && <StoreModal store={editEntity.data && editEntity.data.id ? editEntity.data : (editEntity.data ? { nome: "", categoria: "DISTRIBUICAO", ccCode: "", meta: 95, limBackup: 5, cor: STORE_COLORS[0], tipo: "normal", horaChegada: false, ...editEntity.data } : null)} clients={clients} onClose={() => setEditEntity(null)} onSave={async (d) => { if (await saveStore(d)) setEditEntity(null); }} />}
+      {editEntity && editEntity.kind === "client" && <ClientModal client={editEntity.data} onClose={() => setEditEntity(null)} onSave={async (d) => { if (await saveClient(d)) setEditEntity(null); }} />}
       <ToastHost toasts={toasts} onDismiss={(id) => setToasts((t) => t.filter((x) => x.id !== id))} />
     </OpsCtx.Provider>
   );
