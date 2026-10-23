@@ -2872,6 +2872,156 @@ function ExitDriverModal({ emp, date, isPool, onClose }) {
   );
 }
 
+/* Menu flutuante: abre num "portal" no <body>, fora dos cartões com overflow-hidden,
+   por isso nunca fica cortado. Se não houver espaço por baixo, abre para cima. */
+function FloatingMenu({ anchor, onClose, width = 240, children }) {
+  const ref = useRef(null);
+  const [pos, setPos] = useState(null);
+  useEffect(() => {
+    if (!anchor) return;
+    const place = () => {
+      const r = anchor.getBoundingClientRect();
+      const h = ref.current ? ref.current.offsetHeight : 320;
+      const vh = window.innerHeight, vw = window.innerWidth;
+      const left = Math.max(8, Math.min(r.right - width, vw - width - 8));
+      const below = r.bottom + 6, above = r.top - 6 - h;
+      const top = (below + h <= vh - 8 || above < 8) ? Math.min(below, Math.max(8, vh - h - 8)) : above;
+      setPos({ top, left });
+    };
+    place();
+    const raf = requestAnimationFrame(place);
+    const close = () => onClose();
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", close); window.removeEventListener("scroll", close, true); window.removeEventListener("keydown", onKey); };
+  }, [anchor]);
+  return ReactDOM.createPortal(
+    <>
+      <div style={{ position: "fixed", inset: 0, zIndex: 60 }} onClick={onClose} />
+      <div ref={ref} className="menu" style={{ position: "fixed", zIndex: 61, width, top: pos ? pos.top : -9999, left: pos ? pos.left : -9999, maxHeight: "calc(100vh - 16px)", overflowY: "auto" }}>
+        {children}
+      </div>
+    </>,
+    document.body
+  );
+}
+
+/* Saída / substituição num só passo:
+   desligar (ou abandono) + criar já o novo motorista no mesmo lugar. */
+function ReplaceDriverModal({ emp, date, isPool, initialMode, onClose }) {
+  const ops = useOps();
+  const store = ops.stores.find((s) => s.id === emp.lojaId);
+  const [type, setType] = useState("Desligado");
+  const [lastDay, setLastDay] = useState(initialMode === "ninguem" ? date : shiftISO(date, -1));
+  const [mode, setMode] = useState(initialMode || "novo"); // novo | existente | ninguem
+  const [start, setStart] = useState(initialMode === "ninguem" ? shiftISO(date, 1) : date);
+  const [startTouched, setStartTouched] = useState(false);
+  const [f, setF] = useState({ nome: "", existingId: "", turno: emp.turno || "Full Time", funcao: emp.funcao || "Motorista", veiculo: emp.veiculo || "", folgaFixa: emp.folgaFixa || [] });
+  const [showMore, setShowMore] = useState(false);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const [lastTouched, setLastTouched] = useState(false);
+  const changeLast = (v) => { setLastDay(v); setLastTouched(true); if (!startTouched && v) setStart(shiftISO(v, 1)); };
+  const candidates = ops.employees.filter((e) => e.id !== emp.id && (!q || normTxt(e.nome).includes(normTxt(q))))
+    .sort((a, b) => (a.estado === "Desligado") - (b.estado === "Desligado") || a.nome.localeCompare(b.nome)).slice(0, 60);
+  const sName = (id) => (ops.stores.find((s) => s.id === id) || {}).nome || "—";
+  const ex = ops.employees.find((e) => e.id === f.existingId);
+  const newName = mode === "novo" ? f.nome.trim() : mode === "existente" && ex ? ex.nome : "";
+  const valid = !!lastDay && (mode === "ninguem" || (!!start && !!newName && start > lastDay));
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!valid || busy) return;
+    setBusy(true);
+    let ok = true;
+    if (type === "Abandono") ok = await ops.registerExit({ emp, date: lastDay, type: "Abandono", isPool });
+    if (ok && mode !== "ninguem") {
+      ok = await ops.swapDriver({ oldEmp: emp, date: start, nome: mode === "novo" ? newName : "", existingId: mode === "existente" ? f.existingId : "", turno: f.turno, funcao: f.funcao, veiculo: f.veiculo, folgaFixa: f.folgaFixa });
+      // a troca define o último dia como "início − 1"; se o utilizador indicou outro, respeita-o
+      if (ok && type === "Desligado" && shiftISO(start, -1) !== lastDay) ok = await ops.registerExit({ emp, date: lastDay, type: "Desligado", isPool });
+    } else if (ok && mode === "ninguem" && type === "Desligado") {
+      ok = await ops.registerExit({ emp, date: lastDay, type: "Desligado", isPool });
+    }
+    setBusy(false);
+    if (ok) onClose();
+  };
+  return (
+    <Modal title="Saída / substituição de motorista" onClose={onClose} width="max-w-xl">
+      <form onSubmit={submit}>
+        <div className="swap-box mb-4">
+          <div><span>Sai</span><b>{emp.nome}</b><em>{store ? store.nome : "—"} · último dia {lastDay ? fmtDMY(lastDay) : "—"}</em></div>
+          <Icon path={mode === "ninguem" ? ICONS.userX : ICONS.swap} size={18} />
+          <div><span>Entra</span><b>{mode === "ninguem" ? "Ninguém" : newName || "—"}</b><em>{mode === "ninguem" ? "posto fica sem titular" : `a partir de ${start ? fmtDMY(start) : "—"}`}</em></div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field label="Tipo de saída"><Seg value={type} onChange={(v) => { setType(v); if (!lastTouched) { const ld = v === "Abandono" ? date : (mode === "ninguem" ? date : shiftISO(date, -1)); setLastDay(ld); if (!startTouched) setStart(shiftISO(ld, 1)); } }} size="sm" options={[["Desligado", "Desligado"], ["Abandono", "Abandono"]]} /></Field>
+          <Field label={type === "Desligado" ? `Último dia de ${emp.nome.split(" ")[0]}` : "Dia do abandono"}><input required type="date" className={inputCls} value={lastDay} onChange={(e) => changeLast(e.target.value)} /></Field>
+        </div>
+
+        <div className="mb-3"><Seg value={mode} onChange={(v) => { setMode(v); if (!lastTouched && type === "Desligado") { const ld = v === "ninguem" ? date : shiftISO(date, -1); setLastDay(ld); if (!startTouched) setStart(shiftISO(ld, 1)); } }} size="sm" options={[["novo", "Novo motorista"], ["existente", "Colaborador já registado"], ["ninguem", "Só desligar"]]} /></div>
+
+        {mode === "novo" && (
+          <>
+            <div className="grid sm:grid-cols-[1fr_170px] gap-3">
+              <Field label="Nome do novo motorista"><input autoFocus className={inputCls} value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ex.: João Silva" /></Field>
+              <Field label="1.º dia dele"><input type="date" className={inputCls} value={start} onChange={(e) => { setStart(e.target.value); setStartTouched(true); }} /></Field>
+            </div>
+            <button type="button" onClick={() => setShowMore(!showMore)} className="text-[12px] font-semibold text-[var(--accent)] mb-3">
+              {showMore ? "▾" : "▸"} Turno, função, veículo e folga — copiados de {emp.nome.split(" ")[0]} ({f.turno} · {f.funcao})
+            </button>
+            {showMore && (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <Field label="Turno"><select className={inputCls} value={f.turno} onChange={(e) => set("turno", e.target.value)}>{TURNOS.map((t) => <option key={t}>{t}</option>)}</select></Field>
+                  <Field label="Função"><select className={inputCls} value={f.funcao} onChange={(e) => set("funcao", e.target.value)}>{FUNCOES.map((t) => <option key={t}>{t}</option>)}</select></Field>
+                  <Field label="Veículo"><input className={inputCls} value={f.veiculo} onChange={(e) => set("veiculo", e.target.value)} /></Field>
+                </div>
+                <Field label="Folga fixa"><DaysPicker value={f.folgaFixa} onChange={(v) => set("folgaFixa", v)} /></Field>
+              </>
+            )}
+          </>
+        )}
+
+        {mode === "existente" && (
+          <>
+            <Field label="1.º dia na loja"><input type="date" className={inputCls} value={start} onChange={(e) => { setStart(e.target.value); setStartTouched(true); }} /></Field>
+            <Field label="Escolher colaborador">
+              <input autoFocus className={inputCls + " mb-2"} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Pesquisar por nome…" />
+              <div className="pick-list">
+                {candidates.map((c) => (
+                  <button type="button" key={c.id} onClick={() => set("existingId", c.id)} className={`pick ${f.existingId === c.id ? "on" : ""}`}>
+                    <b>{c.nome}</b><span>{sName(c.lojaId)}{c.estado === "Desligado" ? " · desligado — será reativado" : " · será movido para esta loja"}</span>
+                  </button>
+                ))}
+                {!candidates.length && <div className="text-xs text-[var(--text-secondary)] p-3">Nenhum colaborador encontrado.</div>}
+              </div>
+            </Field>
+          </>
+        )}
+
+        <p className="text-[11px] text-[var(--text-secondary)] mb-4 leading-relaxed">
+          {type === "Abandono"
+            ? `Fica registado “Abandono” em ${lastDay ? fmtDMY(lastDay) : "—"} (conta como falta sem reposição). `
+            : `Não conta como falta. `}
+          {emp.nome} deixa de aparecer a partir de {lastDay ? fmtDMY(shiftISO(lastDay, 1)) : "—"}; os registos que já tem ficam guardados.
+          {mode !== "ninguem" && start && lastDay && start <= lastDay && <span className="text-red-500 font-semibold"> O 1.º dia do substituto tem de ser depois do último dia de {emp.nome.split(" ")[0]}.</span>}
+          {mode !== "ninguem" && start && lastDay && shiftISO(lastDay, 1) < start && <span> Entre {fmtDMY(shiftISO(lastDay, 1))} e {fmtDMY(shiftISO(start, -1))} o posto fica sem titular.</span>}
+        </p>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn btn-ghost">Cancelar</button>
+          <button type="submit" disabled={!valid || busy} className={mode === "ninguem" ? "btn btn-danger" : "btn btn-primary"}>
+            <Icon path={mode === "ninguem" ? ICONS.userX : ICONS.swap} size={15} />
+            {busy ? "A guardar…" : mode === "ninguem" ? "Registar saída" : "Confirmar troca"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function DailyRegisterView({ params }) {
   const ops = useOps();
   const { stores, employees, clients } = ops;
@@ -2885,6 +3035,7 @@ function DailyRegisterView({ params }) {
   const [err, setErr] = useState("");
   const [noteEdit, setNoteEdit] = useState(null);
   const [moreFor, setMoreFor] = useState(null);
+  const [moreAnchor, setMoreAnchor] = useState(null);
   const [people, setPeople] = useState(null); // { type: "add"|"swap"|"exit", emp, storeId, isPool }
   const [busy, setBusy] = useState({});
   const listRef = useRef(null);
@@ -2984,6 +3135,7 @@ function DailyRegisterView({ params }) {
     if (ev.key === "0" || ev.key === "Backspace" || ev.key === "Delete") { ev.preventDefault(); if (cells && cells[cellKey(r.emp.id, day)]) setStatus(r, "", false); return; }
     if (ev.key === "ArrowDown" || ev.key === "j") { ev.preventDefault(); moveFocus(r.key, 1); }
     if (ev.key === "ArrowUp" || ev.key === "k") { ev.preventDefault(); moveFocus(r.key, -1); }
+    if (ev.key === "t" || ev.key === "T") { ev.preventDefault(); setPeople({ type: "replace", emp: r.emp, isPool: r.isPool, mode: "novo" }); return; }
     if (ev.key === "n" || ev.key === "N") { ev.preventDefault(); setNoteEdit({ key: cellKey(r.emp.id, day), nome: r.emp.nome, text: (doc && doc.notes[cellKey(r.emp.id, day)]) || "" }); }
   };
   const bulkOk = async (storeRows, store) => {
@@ -3136,20 +3288,18 @@ function DailyRegisterView({ params }) {
                               )}
                               <div className="relative flex items-center">
                                 <button onClick={() => setNoteEdit({ key: k, nome: r.emp.nome, text: note || "" })} className={`icon-btn ${note ? "text-[var(--accent)]" : ""}`} title="Observação (N)"><Icon path={ICONS.note} size={15} /></button>
-                                <button onClick={() => setMoreFor(moreFor === r.key ? null : r.key)} className="icon-btn" title="Mais opções: trocar, saída, outros estados"><Icon path={ICONS.more} size={16} /></button>
-                                {moreFor === r.key && (
-                                  <>
-                                    <div className="fixed inset-0 z-30" onClick={() => setMoreFor(null)} />
-                                    <div className="menu absolute right-0 top-9 z-40 w-60">
-                                      <button onClick={() => { setMoreFor(null); setPeople({ type: "swap", emp: r.emp }); }} className="menu-item font-semibold"><Icon path={ICONS.swap} size={14} />Trocar motorista…</button>
-                                      <button onClick={() => { setMoreFor(null); setPeople({ type: "exit", emp: r.emp, isPool: r.isPool }); }} className="menu-item"><Icon path={ICONS.userX} size={14} />Registar saída…</button>
+                                <button onClick={() => setPeople({ type: "replace", emp: r.emp, isPool: r.isPool, mode: "novo" })} className="icon-btn" title="Desligar / trocar motorista (T)"><Icon path={ICONS.swap} size={15} /></button>
+                                <button onClick={(e) => { if (moreFor === r.key) { setMoreFor(null); return; } setMoreAnchor(e.currentTarget); setMoreFor(r.key); }} className="icon-btn" title="Mais opções: trocar, saída, outros estados"><Icon path={ICONS.more} size={16} /></button>
+                                {moreFor === r.key && moreAnchor && (
+                                  <FloatingMenu anchor={moreAnchor} onClose={() => setMoreFor(null)} width={250}>
+                                      <button onClick={() => { setMoreFor(null); setPeople({ type: "replace", emp: r.emp, isPool: r.isPool, mode: "novo" }); }} className="menu-item font-semibold"><Icon path={ICONS.swap} size={14} />Trocar por outro motorista…</button>
+                                      <button onClick={() => { setMoreFor(null); setPeople({ type: "replace", emp: r.emp, isPool: r.isPool, mode: "ninguem" }); }} className="menu-item"><Icon path={ICONS.userX} size={14} />Desligar / registar saída…</button>
                                       <button onClick={() => { setMoreFor(null); ops.openEmployee(r.emp.id); }} className="menu-item"><Icon path={ICONS.edit} size={14} />Ficha / editar</button>
                                       {!r.isPool && <><div className="h-px bg-[var(--border-c)] my-1" /><div className="px-2.5 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">Outros estados neste dia</div></>}
-                                      {!r.isPool && MORE_STATES.filter((v) => !EXIT_STATUSES.includes(v)).map((v) => { const m = statusMeta(v); return <button key={v} onClick={() => setStatus(r, v, false)} className="menu-item"><span className="w-2.5 h-2.5 rounded-full" style={{ background: m.dot }} />{m.label}{EXIT_STATUSES.includes(v) && <span className="ml-auto text-[10px] text-[var(--text-secondary)]">desativa</span>}</button>; })}
+                                      {!r.isPool && MORE_STATES.filter((v) => !EXIT_STATUSES.includes(v)).map((v) => { const m = statusMeta(v); return <button key={v} onClick={() => { setMoreFor(null); setStatus(r, v, false); }} className="menu-item"><span className="w-2.5 h-2.5 rounded-full" style={{ background: m.dot }} />{m.label}{EXIT_STATUSES.includes(v) && <span className="ml-auto text-[10px] text-[var(--text-secondary)]">desativa</span>}</button>; })}
                                       <div className="h-px bg-[var(--border-c)] my-1" />
-                                      <button onClick={() => setStatus(r, "", false)} className="menu-item text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-gray-200" />Limpar registo</button>
-                                    </div>
-                                  </>
+                                      <button onClick={() => { setMoreFor(null); setStatus(r, "", false); }} className="menu-item text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-gray-200" />Limpar registo</button>
+                                  </FloatingMenu>
                                 )}
                               </div>
                             </div>
@@ -3166,8 +3316,9 @@ function DailyRegisterView({ params }) {
       )}
 
       {people && people.type === "add" && <AddDriverModal storeId={people.storeId} date={date} onClose={() => setPeople(null)} />}
-      {people && people.type === "swap" && <SwapDriverModal emp={people.emp} date={date} onClose={() => setPeople(null)} />}
-      {people && people.type === "exit" && <ExitDriverModal emp={people.emp} date={date} isPool={people.isPool} onClose={() => setPeople(null)} />}
+      {people && people.type === "replace" && <ReplaceDriverModal emp={people.emp} date={date} isPool={people.isPool} initialMode={people.mode} onClose={() => setPeople(null)} />}
+      {people && people.type === "swap" && <ReplaceDriverModal emp={people.emp} date={date} isPool={people.isPool} initialMode="novo" onClose={() => setPeople(null)} />}
+      {people && people.type === "exit" && <ReplaceDriverModal emp={people.emp} date={date} isPool={people.isPool} initialMode="ninguem" onClose={() => setPeople(null)} />}
       {noteEdit && (
         <Modal title={`Observação · ${noteEdit.nome}`} onClose={() => setNoteEdit(null)} width="max-w-md">
           <p className="text-xs text-[var(--text-secondary)] mb-2">{fmtLongDate(date)}. A observação é guardada junto do registo do dia e fica visível para todos os utilizadores.</p>
