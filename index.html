@@ -2336,7 +2336,7 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
 /* ====================================================================== */
 /* CONTEXTO GLOBAL + COMPONENTES DO SISTEMA DE DESIGN                      */
 /* ====================================================================== */
-const APP_VERSION = "v2026.10.26-a";
+const APP_VERSION = "v2026.10.26-b";
 const OpsCtx = React.createContext(null);
 const useOps = () => React.useContext(OpsCtx);
 const ALERT_DOC = () => col("schedule").doc("_alertas");
@@ -3589,6 +3589,134 @@ async function renderReportCanvas(r, date, showPresent, scale = 2) {
 }
 const canvasBlob = (cv) => new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar a imagem."))), "image/png"));
 async function reportBlob(r, date, showPresent) { return canvasBlob(await renderReportCanvas(r, date, showPresent)); }
+
+/* ---------- Imagem da Grelha Mensal desenhada em Canvas (alinhamento exato, igual em qualquer browser) ---------- */
+function paintGridImage(ctx, mdl, draw, logo) {
+  const P = 28, DAY_W = 74, ROW_H = 32, PILL_H = 24, ST_H = 40, EMP_H = 44, HB = 96;
+  const T = (txt, x, y, font, color, align = "left", base = "middle") => { if (!draw) return; ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(txt, x, y); };
+  // Largura de cada coluna: nome do colaborador e textos das células, entre 86 e 132 px
+  ctx.font = RF(700, 11.5);
+  mdl.groups.forEach((g) => g.cols.forEach((c) => {
+    let w = ctx.measureText(c.nome).width + 18;
+    ctx.font = RF(700, 11);
+    c.cells.forEach((cl) => { if (cl.label) w = Math.max(w, Math.min(ctx.measureText(cl.label).width + 22, 170)); });
+    ctx.font = RF(700, 11.5);
+    c.w = Math.round(Math.max(86, Math.min(170, w)));
+  }));
+  mdl.groups.forEach((g) => { g.w = g.cols.reduce((a, c) => a + c.w, 0); });
+  const tableW = DAY_W + mdl.groups.reduce((a, g) => a + g.w, 0);
+  const W = Math.max(760, tableW + 2 * P);
+  const X0 = Math.round((W - tableW) / 2);
+
+  // Faixa de marca
+  if (draw) {
+    const gr = ctx.createLinearGradient(0, 0, W, HB); gr.addColorStop(0, "#2b74d6"); gr.addColorStop(1, BRAND_BLUE);
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, HB);
+    const lh = 42; if (logo) ctx.drawImage(logo, P, (HB - lh) / 2, lh * LOGO_RATIO, lh); else T("DELIVERY EXPRESS", P, HB / 2, RF(800, 22), "#fff");
+    ctx.font = RF(700, 11); setLS(ctx, 1.4); ctx.fillStyle = "rgba(255,255,255,.78)"; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic"; ctx.fillText("GRELHA MENSAL DE PRESENÇAS", W - P, 40); setLS(ctx, 0);
+  }
+  T(mdl.title, W - P, 62, RF(800, 20), "#ffffff", "right");
+  let y = HB + 20;
+  if (mdl.scope) { T(mdl.scope, X0, y + 8, RF(600, 12.5), "#475569"); y += 26; }
+
+  // Contorno da tabela
+  const tableTop = y, tableH = ST_H + EMP_H + mdl.days.length * ROW_H;
+  if (draw) { ctx.fillStyle = "#ffffff"; rrPath(ctx, X0, tableTop, tableW, tableH, 14); ctx.fill(); ctx.save(); rrPath(ctx, X0, tableTop, tableW, tableH, 14); ctx.clip(); }
+
+  // Linhas de fim de semana
+  mdl.days.forEach((d, i) => { if (draw && (d.dow === 0 || d.dow === 6)) { ctx.fillStyle = "#fafbfd"; ctx.fillRect(X0, tableTop + ST_H + EMP_H + i * ROW_H, tableW, ROW_H); } });
+
+  // Cabeçalhos
+  if (draw) { ctx.fillStyle = "#f8fafc"; ctx.fillRect(X0, tableTop, DAY_W, ST_H + EMP_H); }
+  T("DIA", X0 + DAY_W / 2, tableTop + (ST_H + EMP_H) / 2, RF(800, 11), "#64748b", "center");
+  let x = X0 + DAY_W;
+  mdl.groups.forEach((g) => {
+    if (draw) { ctx.fillStyle = mixHex(g.cor, 0.12, "#ffffff"); ctx.fillRect(x, tableTop, g.w, ST_H); ctx.fillStyle = g.cor; ctx.fillRect(x, tableTop, g.w, 3); }
+    ctx.font = RF(800, 11.5);
+    const lines = wrapText(ctx, g.nome.toUpperCase(), g.w - 14).slice(0, 2);
+    lines.forEach((ln, k) => T(fitText(ctx, ln, g.w - 12), x + g.w / 2, tableTop + 2 + ST_H / 2 + (k - (lines.length - 1) / 2) * 14, RF(800, 11.5), mixHex(g.cor, 0.85, "#0f172a"), "center"));
+    g.cols.forEach((c) => {
+      ctx.font = RF(700, 11.5);
+      const nameLines = c.arrival ? ["Chegada", "camião"] : wrapText(ctx, c.nome, c.w - 10).slice(0, 2);
+      const sub = c.arrival ? "" : c.turno;
+      const n = nameLines.length + (sub ? 1 : 0);
+      nameLines.forEach((ln, k) => T(fitText(ctx, ln, c.w - 8), x + c.w / 2, tableTop + ST_H + EMP_H / 2 + (k - (n - 1) / 2) * 13, RF(700, 11.5), "#0f172a", "center"));
+      if (sub) T(sub, x + c.w / 2, tableTop + ST_H + EMP_H / 2 + (nameLines.length - (n - 1) / 2) * 13, RF(500, 9.5), "#94a3b8", "center");
+      x += c.w;
+    });
+  });
+
+  // Corpo
+  mdl.days.forEach((d, i) => {
+    const ry = tableTop + ST_H + EMP_H + i * ROW_H, cy = ry + ROW_H / 2, we = d.dow === 0 || d.dow === 6;
+    T(String(d.day), X0 + 14, cy, RF(800, 13), we ? "#dc2626" : "#0f172a");
+    T(DIAS_SEMANA[d.dow], X0 + 38, cy + 0.5, RF(600, 10.5), we ? "#ef4444" : "#94a3b8");
+    let cx = X0 + DAY_W;
+    mdl.groups.forEach((g) => g.cols.forEach((c) => {
+      const cl = c.cells[i], px = cx + 4, pw = c.w - 8, py = cy - PILL_H / 2;
+      if (draw) {
+        ctx.save(); if (cl.dim) ctx.globalAlpha = 0.25;
+        if (cl.hatch) {
+          ctx.fillStyle = "#f1f5f9"; rrPath(ctx, px, py, pw, PILL_H, 6); ctx.fill();
+          ctx.save(); rrPath(ctx, px, py, pw, PILL_H, 6); ctx.clip(); ctx.strokeStyle = "rgba(148,163,184,.35)"; ctx.lineWidth = 1.5;
+          for (let k = -PILL_H; k < pw; k += 7) { ctx.beginPath(); ctx.moveTo(px + k, py + PILL_H); ctx.lineTo(px + k + PILL_H, py); ctx.stroke(); } ctx.restore();
+        } else if (cl.bg) { ctx.fillStyle = cl.bg; rrPath(ctx, px, py, pw, PILL_H, 6); ctx.fill(); }
+        if (cl.ring) { ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]); rrPath(ctx, px + 0.75, py + 0.75, pw - 1.5, PILL_H - 1.5, 5.5); ctx.stroke(); ctx.setLineDash([]); }
+        if (cl.label) { ctx.font = RF(cl.bold === false ? 600 : 700, 11); ctx.fillStyle = cl.fg; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(fitText(ctx, cl.label, pw - 8), px + pw / 2, cy + 0.5); }
+        ctx.restore();
+      }
+      cx += c.w;
+    }));
+  });
+
+  // Grelha de linhas
+  if (draw) {
+    ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
+    for (let i = 0; i <= mdl.days.length; i++) { const ly = Math.round(tableTop + ST_H + EMP_H + i * ROW_H) + 0.5; ctx.beginPath(); ctx.moveTo(X0, ly); ctx.lineTo(X0 + tableW, ly); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(X0 + DAY_W, tableTop + ST_H + 0.5); ctx.lineTo(X0 + tableW, tableTop + ST_H + 0.5); ctx.stroke();
+    let lx = X0 + DAY_W;
+    mdl.groups.forEach((g) => {
+      ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(lx, tableTop); ctx.lineTo(lx, tableTop + tableH); ctx.stroke();
+      let ix = lx; ctx.strokeStyle = "#eef2f7"; ctx.lineWidth = 1;
+      g.cols.forEach((c, k) => { if (k) { ctx.beginPath(); ctx.moveTo(Math.round(ix) + 0.5, tableTop + ST_H); ctx.lineTo(Math.round(ix) + 0.5, tableTop + tableH); ctx.stroke(); } ix += c.w; });
+      lx += g.w;
+    });
+    ctx.restore();
+    ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1; rrPath(ctx, X0 + 0.5, tableTop + 0.5, tableW - 1, tableH - 1, 14); ctx.stroke();
+  }
+  y = tableTop + tableH + 22;
+
+  // Legenda
+  let lx = X0;
+  mdl.legend.forEach((lg) => {
+    ctx.font = RF(600, 11.5);
+    const w = 22 + ctx.measureText(lg.label).width + 18;
+    if (lx + w > X0 + tableW) { lx = X0; y += 22; }
+    if (draw) {
+      ctx.fillStyle = lg.bg; rrPath(ctx, lx, y - 7, 14, 14, 4); ctx.fill();
+      if (lg.ring) { ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]); rrPath(ctx, lx + 0.75, y - 6.25, 12.5, 12.5, 3.5); ctx.stroke(); ctx.setLineDash([]); }
+    }
+    T(lg.label, lx + 20, y + 0.5, RF(600, 11.5), "#475569");
+    lx += w;
+  });
+  y += 26;
+  if (draw) { ctx.fillStyle = "#e2e8f0"; ctx.fillRect(X0, y, tableW, 1); }
+  T("Delivery Express", X0, y + 20, RF(700, 12), BRAND_BLUE);
+  T(`Gerado a ${fmtDMY(todayISO())} às ${fmtHM(new Date())}`, X0 + tableW, y + 20, RF(500, 11.5), "#94a3b8", "right");
+  return { w: W, h: Math.ceil(y + 20 + P) };
+}
+async function renderGridCanvas(mdl) {
+  const logo = await ensureReportFonts();
+  const m = document.createElement("canvas").getContext("2d");
+  const { w, h } = paintGridImage(m, mdl, false, logo);
+  const scale = Math.max(0.6, Math.min(2, 16000 / w, 16000 / h, Math.sqrt(120000000 / (w * h))));
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
+  const ctx = cv.getContext("2d"); ctx.scale(scale, scale);
+  ctx.fillStyle = "#f4f6fb"; ctx.fillRect(0, 0, w, h);
+  paintGridImage(ctx, mdl, true, logo);
+  return cv;
+}
 
 function ReportCard({ r, date, showPresent }) {
   const ops = useOps();
@@ -4976,72 +5104,44 @@ function GridView({ stores, employees, clients, getScheduleForMonth, saveCellSta
     setM(nm); setY(ny);
   };
 
-  // Captura a grelha inteira (incluindo cabeçalhos fixos e todas as linhas,
-  // mesmo as que estão fora da área visível de scroll) e faz download em PNG.
+  // Gera a imagem da grelha desenhando-a diretamente em Canvas (texto centrado e alinhado ao pixel,
+  // sem depender da captura do ecrã) e faz download em PNG.
   const handleDownloadGridPNG = async () => {
-    const el = gridScrollRef.current;
-    if (!el) return;
-    if (typeof html2canvas === "undefined") {
-      alert("Não foi possível gerar a imagem: a biblioteca de exportação ainda não carregou. Verifica a ligação à internet e tenta novamente em alguns segundos.");
-      return;
-    }
-
     setExporting(true);
-
-    // 1) Remove temporariamente o limite de altura e o scroll do contentor,
-    //    para que TODAS as linhas (mesmo as que estão fora do scroll) fiquem
-    //    presentes no layout normal do documento.
-    const prevMaxHeight = el.style.maxHeight;
-    const prevOverflow = el.style.overflow;
-    el.style.maxHeight = "none";
-    el.style.overflow = "visible";
-
-    // 2) Neutraliza position:sticky (cabeçalhos e coluna "DIA") — sem um
-    //    contentor com scroll, o sticky pode "colar-se" ao viewport e
-    //    estragar a captura. Guarda o valor original de cada elemento para
-    //    repor depois.
-    const stickyEls = Array.from(el.querySelectorAll("*")).filter(
-      (n) => getComputedStyle(n).position === "sticky"
-    );
-    const stickyOriginal = stickyEls.map((n) => n.style.position);
-    stickyEls.forEach((n) => { n.style.position = "static"; });
-
-    // Força reflow antes de capturar
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
     try {
-      // Escala reduzida automaticamente em grelhas muito grandes (limite de tamanho do canvas do browser).
-      const W = el.scrollWidth, H = el.scrollHeight;
-      const scale = Math.max(0.5, Math.min(2, 16000 / W, 16000 / H, Math.sqrt(120000000 / (W * H))));
-      const canvas = await html2canvas(el, {
-        backgroundColor: document.documentElement.classList.contains("dark") ? "#121927" : "#ffffff",
-        scale,
-        useCORS: true,
-        logging: false,
-        windowWidth: W,
-        windowHeight: H,
-        // Rede de segurança: limpa funções de cor modernas que o html2canvas não sabe ler.
-        onclone: (doc) => {
-          doc.querySelectorAll("style").forEach((st) => { if (st.textContent.includes("color-mix(")) st.textContent = stripColorMix(st.textContent); });
-          doc.querySelectorAll("[style*='color-mix(']").forEach((n) => n.setAttribute("style", stripColorMix(n.getAttribute("style"))));
-        },
+      const groups = [];
+      visibleStores.forEach((s) => {
+        const emps = empByStore(s.id);
+        if (!emps.length) return;
+        const cols = [];
+        if (s.horaChegada) cols.push({ arrival: true, nome: "Chegada camião", turno: "", cells: days.map((day) => { const v = arrivals[arrivalKey(s.id, day)] || ""; return { label: v || "—", bg: v ? "#fff7ed" : "", fg: v ? "#9a3412" : "#cbd5e1" }; }) });
+        emps.forEach((e) => {
+          cols.push({ nome: e.nome, turno: e.turno || "", cells: days.map((day) => {
+            const k = cellKey(e.id, day), iso = isoDate(y, m, day);
+            if (!schedule[k] && !empActiveOn(e, iso)) return { hatch: true, label: e.dataEntrada && iso < e.dataEntrada ? "" : "—", fg: "#94a3b8" };
+            const val = effectiveValue(e, day);
+            const isAuto = !schedule[k] && val === "Folga";
+            const known = !!val && STATUS_OPTIONS.some((o) => o.value === val);
+            if (s.tipo === "backup_pool" && !known) return val ? { label: storeById(val)?.nome || val, bg: "#e0ecff", fg: "#1d4ed8" } : { label: "", bg: "#f3f4f6", fg: "#9ca3af" };
+            const meta = statusMeta(val);
+            return { label: meta.blank || !val ? "" : meta.label, bg: val ? meta.bg : "#f3f4f6", fg: meta.fg, ring: isAuto, dim: !!fStatus && val !== fStatus };
+          }) });
+        });
+        groups.push({ nome: s.nome, cor: s.cor || "#64748b", cols });
       });
-      const nomeFicheiro = `grelha-${MESES[m]}-${y}`
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-      const link = document.createElement("a");
-      link.download = `${nomeFicheiro}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      if (!groups.length) { alert("Não há colaboradores na grelha com os filtros atuais."); return; }
+      const scope = [fCliente && (clients.find((c) => c.id === fCliente) || {}).nome, fLoja && (storeById(fLoja) || {}).nome, fTurno, fStatus && `Status: ${statusMeta(fStatus).label}`].filter(Boolean).join(" · ");
+      const legend = STATUS_OPTIONS.filter((o) => o.value).map((o) => ({ label: o.label, bg: o.dot }))
+        .concat([{ label: "Folga fixa (automática)", bg: "#eef0f4", ring: true }, { label: "Backup em loja (pool)", bg: "#3b82f6" }, { label: "Fora do período do colaborador", bg: "#cbd5e1" }]);
+      const cv = await renderGridCanvas({ title: `${MESES[m]} ${y}`, scope: scope || "Todos os clientes e lojas", days: days.map((d) => ({ day: d, dow: new Date(y, m, d).getDay() })), groups, legend });
+      const blob = await canvasBlob(cv);
+      const nome = `grelha-${scope ? slugify(scope) + "-" : ""}${slugify(MESES[m])}-${y}.png`;
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
     } catch (err) {
       console.error("Erro ao gerar PNG da grelha:", err);
       alert("Ocorreu um erro ao gerar a imagem da grelha.\n\nDetalhe: " + ((err && err.message) || err));
     } finally {
-      // 3) Repõe tudo como estava
-      stickyEls.forEach((n, i) => { n.style.position = stickyOriginal[i] || ""; });
-      el.style.maxHeight = prevMaxHeight;
-      el.style.overflow = prevOverflow;
       setExporting(false);
     }
   };
