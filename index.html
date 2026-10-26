@@ -295,7 +295,6 @@
   /* Utilitários com prioridade sobre componentes */
   @media (min-width:1024px){ .lg\:hidden{display:none !important;} }
   .input.pl-9{padding-left:2.25rem;}
-  .grid-store-head{background:color-mix(in srgb,var(--store-c) 9%,var(--card-bg));}
   @media (max-width:1023px){ .qbtns{flex-wrap:wrap;overflow:visible;} .reg-actions{align-items:flex-start;width:100%;justify-content:space-between;} }
   .mini em span{text-transform:none;letter-spacing:0;font-size:inherit;font-weight:600;}
 
@@ -497,6 +496,26 @@ const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(
 const pad2 = (n) => String(n).padStart(2, "0");
 const monthKey = (y, m) => `${y}-${pad2(m + 1)}`;
 const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+// Mistura uma cor hex com a cor de fundo (sem color-mix(), que o html2canvas não suporta).
+const mixHex = (hex, pct, baseHex) => {
+  const p = (h) => { let x = String(h || "#999999").replace("#", ""); if (x.length === 3) x = x.split("").map((c) => c + c).join(""); const n = parseInt(x, 16); return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : [153, 153, 153]; };
+  const a = p(hex), b = p(baseHex);
+  return `rgb(${a.map((v, i) => Math.round(v * pct + b[i] * (1 - pct))).join(",")})`;
+};
+// Remove color-mix(...) de texto CSS (html2canvas 1.4.1 rebenta com essa função).
+function stripColorMix(css) {
+  let out = "", i = 0;
+  while (true) {
+    const j = css.indexOf("color-mix(", i);
+    if (j < 0) { out += css.slice(i); break; }
+    out += css.slice(i, j);
+    let k = j + 10, depth = 1;
+    while (k < css.length && depth > 0) { if (css[k] === "(") depth++; else if (css[k] === ")") depth--; k++; }
+    out += "transparent";
+    i = k;
+  }
+  return out;
+}
 const fmtEUR = (n) => `€${(n || 0).toLocaleString("pt-PT")}`;
 const cellKey = (empId, day) => `${empId}_${day}`;
 const arrivalKey = (storeId, day) => `${storeId}_${day}`;
@@ -2317,7 +2336,7 @@ function buildDayReports({ iso, recs, employees, stores, clients, cells }) {
 /* ====================================================================== */
 /* CONTEXTO GLOBAL + COMPONENTES DO SISTEMA DE DESIGN                      */
 /* ====================================================================== */
-const APP_VERSION = "v2026.10.22-c";
+const APP_VERSION = "v2026.10.26-a";
 const OpsCtx = React.createContext(null);
 const useOps = () => React.useContext(OpsCtx);
 const ALERT_DOC = () => col("schedule").doc("_alertas");
@@ -4991,12 +5010,21 @@ function GridView({ stores, employees, clients, getScheduleForMonth, saveCellSta
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
     try {
+      // Escala reduzida automaticamente em grelhas muito grandes (limite de tamanho do canvas do browser).
+      const W = el.scrollWidth, H = el.scrollHeight;
+      const scale = Math.max(0.5, Math.min(2, 16000 / W, 16000 / H, Math.sqrt(120000000 / (W * H))));
       const canvas = await html2canvas(el, {
-        backgroundColor: "#ffffff",
-        scale: 2,
+        backgroundColor: document.documentElement.classList.contains("dark") ? "#121927" : "#ffffff",
+        scale,
         useCORS: true,
-        windowWidth: el.scrollWidth,
-        windowHeight: el.scrollHeight,
+        logging: false,
+        windowWidth: W,
+        windowHeight: H,
+        // Rede de segurança: limpa funções de cor modernas que o html2canvas não sabe ler.
+        onclone: (doc) => {
+          doc.querySelectorAll("style").forEach((st) => { if (st.textContent.includes("color-mix(")) st.textContent = stripColorMix(st.textContent); });
+          doc.querySelectorAll("[style*='color-mix(']").forEach((n) => n.setAttribute("style", stripColorMix(n.getAttribute("style"))));
+        },
       });
       const nomeFicheiro = `grelha-${MESES[m]}-${y}`
         .toLowerCase()
@@ -5008,7 +5036,7 @@ function GridView({ stores, employees, clients, getScheduleForMonth, saveCellSta
       link.click();
     } catch (err) {
       console.error("Erro ao gerar PNG da grelha:", err);
-      alert("Ocorreu um erro ao gerar a imagem da grelha.");
+      alert("Ocorreu um erro ao gerar a imagem da grelha.\n\nDetalhe: " + ((err && err.message) || err));
     } finally {
       // 3) Repõe tudo como estava
       stickyEls.forEach((n, i) => { n.style.position = stickyOriginal[i] || ""; });
@@ -5080,7 +5108,7 @@ function GridView({ stores, employees, clients, getScheduleForMonth, saveCellSta
                     if (emps.length === 0) return null;
                     const hasArrival = !!s.horaChegada;
                     return (
-                      <th key={s.id} colSpan={emps.length + (hasArrival ? 1 : 0)} className="grid-store-head text-center px-2 py-2 border-b border-l border-[var(--border-c)] font-extrabold text-[11px] tracking-wide sticky top-0" style={{ color: s.cor, "--store-c": s.cor || "#999999", position:"sticky", top:0, zIndex:4 }}>
+                      <th key={s.id} colSpan={emps.length + (hasArrival ? 1 : 0)} className="grid-store-head text-center px-2 py-2 border-b border-l border-[var(--border-c)] font-extrabold text-[11px] tracking-wide sticky top-0" style={{ color: s.cor, background: mixHex(s.cor, 0.09, document.documentElement.classList.contains("dark") ? "#121927" : "#ffffff"), position:"sticky", top:0, zIndex:4 }}>
                         {s.nome.toUpperCase()}
                       </th>
                     );
